@@ -1,357 +1,41 @@
 ---
 name: bali-components
-description: Use when building Rails views with Bali ViewComponent library - forms, card layouts, modals, tables, avatars, buttons, links, tags, dropdowns
+description: This skill should be used when the user asks to "build a view with Bali", "create a form", "add a card", "use ViewComponents", "add a modal", "add a table", "style with DaisyUI", "create a dashboard", "add navigation", "build a layout", "add a sidebar", "create filters", "add pagination", "upload a file", or mentions any Bali component by name (Card, Table, Modal, Tooltip, Avatar, Link, Tag, Tabs, Breadcrumb, Button, Drawer, Dropdown, FormBuilder, DataTable, Stepper, Timeline, Chart, GanttChart, Skeleton, Carousel, or other Bali ViewComponents).
 ---
 
-# Bali ViewComponents Quick Reference
+# Bali ViewComponents
 
-Bali is a Rails ViewComponent library using DaisyUI/Tailwind. This reference prevents common API mistakes.
+Bali is a Rails ViewComponent library built on DaisyUI/Tailwind with 50+ components. This skill provides API reference and prevents common mistakes when building views with Bali components.
 
-## Critical: Slot APIs
+## Critical Rules
 
-### Card - Title takes TEXT, not block
-
-```erb
-<%# Simple title - use with_title with text argument %>
-<%= render Bali::Card::Component.new do |card| %>
-  <% card.with_title("Simple Title") %>
-  <% card.with_image(src: url) %>
-  Your content here (auto-wrapped in card-body)
-
-  <%# Actions use with_action (singular) - each becomes a btn %>
-  <% card.with_action(href: edit_path) { "Edit" } %>
-<% end %>
-
-<%# Complex title with nested components - use raw HTML in body %>
-<%= render Bali::Card::Component.new do %>
-  <h2 class="card-title text-lg">
-    My Title
-    <%= render Bali::Tag::Component.new(text: "Badge", color: :primary, size: :sm) %>
-  </h2>
-  Content here...
-<% end %>
-```
-
-**CRITICAL:** `with_title(text)` takes a STRING argument, NOT a block. For complex titles with badges/icons, use `<h2 class="card-title">` directly in the card body.
-
-**Slots:** `header`, `title(text)`, `image`, `actions` (use `with_action` singular to add each)
-**NO slots:** `with_body`, `with_footer` - content goes directly in block
-
-### Tooltip - REQUIRES `with_trigger` slot
-
-```erb
-<%# CORRECT: Use with_trigger slot for the hoverable element %>
-<%= render Bali::Tooltip::Component.new(placement: :top) do |tooltip| %>
-  <% tooltip.with_trigger do %>
-    <%= render Bali::Button::Component.new(name: "Hover me", variant: :outline) %>
-  <% end %>
-  This is the tooltip text that appears on hover
-<% end %>
-```
-
-**CRITICAL:** There is NO `content:` parameter! The tooltip text goes in the block, and you MUST use `with_trigger` for the hoverable element.
-
-**Parameters:** `placement:` (`:top`, `:bottom`, `:left`, `:right`), `trigger_event:` (`'mouseenter focus'` default)
-**Slots:** `trigger` (REQUIRED - the element user hovers over)
-**Block content:** The tooltip message text
-
-### Modal - Header takes `title:` keyword
-
-```erb
-<%= render Bali::Modal::Component.new(id: 'my-modal') do |modal| %>
-  <% modal.with_header(title: "Modal Title", close_button: true) %>
-  <% modal.with_body do %>
-    Content here
-  <% end %>
-  <% modal.with_actions do %>
-    <%= render Bali::Button::Component.new(name: 'Cancel', variant: :ghost, data: { action: 'modal#close' }) %>
-    <%= render Bali::Button::Component.new(name: 'Save', variant: :primary) %>
-  <% end %>
-<% end %>
-```
-
-**Slots:** `header(title:)`, `body`, `actions` (NOT footer)
-**Stimulus:** `modal#close`, `modal#open`
-
-### Table - NO pagination slot
-
-```erb
-<%= render Bali::Table::Component.new(form: @filter_form) do |table| %>
-  <%= table.with_header(name: 'Name', sort: :name) %>
-  <%= table.with_header(name: 'Actions') %>
-  <% @records.each do |record| %>
-    <%= table.with_row do %>
-      <td><%= record.name %></td>
-      <td>...</td>
-    <% end %>
-  <% end %>
-<% end %>
-
-<%# Pagination is SEPARATE - use Pagy directly %>
-<%== pagy_nav(@pagy) %>
-```
-
-**Slots:** `headers`, `rows`, `footers`, `new_record_link`, `no_records_notification`
-
-## Component Parameters
-
-### Avatar
-
-```ruby
-Bali::Avatar::Component.new(
-  src: url,           # Image URL
-  size: :md,          # :xs, :sm, :md, :lg, :xl
-  shape: :circle,     # :square, :rounded, :circle
-  mask: nil,          # :heart, :squircle, :hexagon, :triangle, :diamond, :pentagon, :star
-  status: nil,        # :online, :offline
-  ring: nil           # :primary, :secondary, :accent, :success, :warning, :error, :info
-)
-```
-
-**NO `alt` parameter** - use `picture` slot for custom img attributes.
-
-### Link
-
-```ruby
-Bali::Link::Component.new(
-  href: path,
-  name: 'Click me',
-  variant: :primary,  # NOT `type:` (deprecated)
-  size: :md,
-  icon_name: 'edit',
-  modal: true,        # Opens modal on click
-  drawer: true        # Opens drawer on click
-)
-```
-
-**Variants:** `:primary`, `:secondary`, `:accent`, `:info`, `:success`, `:warning`, `:error`, `:ghost`, `:link`, `:neutral`
-
-### DeleteLink
-
-```ruby
-Bali::DeleteLink::Component.new(
-  model: @user,       # OR href: path
-  name: 'Delete',
-  confirm: 'Custom message?',
-  size: :md,
-  icon: true,         # Icon-only mode
-  skip_confirm: false
-)
-```
-
-**NO `variant` parameter** - always styled as error/danger.
-
-### Tag (Badge)
-
-```ruby
-Bali::Tag::Component.new(
-  text: 'Label',
-  color: :primary,    # :neutral, :primary, :secondary, :accent, :ghost, :info, :success, :warning, :error
-  size: :md,          # :xs, :sm, :md, :lg, :xl
-  style: :outline,    # :outline, :soft, :dash
-  href: nil           # Makes it clickable
-)
-```
-
-### ActionsDropdown
-
-```erb
-<%= render Bali::ActionsDropdown::Component.new(align: :end) do |dropdown| %>
-  <%= dropdown.with_item(href: edit_path(record)) { "Edit" } %>
-  <%= dropdown.with_item(href: record_path(record), method: :delete) { "Delete" } %>
-<% end %>
-```
-
-**Item with `method: :delete`** auto-uses DeleteLink with confirmation.
-
-## Forms - Use FormBuilder, NOT ViewComponents
-
-**CRITICAL:** Bali forms use a custom FormBuilder, not ViewComponents. NEVER use raw HTML with Stimulus data attributes for form fields - the FormBuilder handles all the wiring automatically.
-
-```erb
-<%# ALWAYS use builder: Bali::FormBuilder %>
-<%= form_with model: @user, url: users_path, builder: Bali::FormBuilder do |f| %>
-  <%= f.text_field_group :name %>
-  <%= f.email_field_group :email %>
-  <%= f.password_field_group :password %>
-  <%= f.boolean_field_group :accept_terms, label: "Accept terms" %>
-  <%= f.submit_actions "Register", cancel_path: root_path %>
-<% end %>
-
-<%# For forms without a model, use url: %>
-<%= form_with url: "#", method: :get, builder: Bali::FormBuilder, data: { turbo: false } do |f| %>
-  <%= f.date_field_group :start_date, label: "Start Date" %>
-  <%= f.slim_select_group :category, @options, { label: "Category" }, { placeholder: "Choose..." } %>
-<% end %>
-```
-
-### Field Methods
-
-| Method | Usage |
-|--------|-------|
-| `text_field_group :attr` | Text input with label |
-| `email_field_group :attr` | Email input |
-| `password_field_group :attr` | Password input |
-| `number_field_group :attr` | Number input |
-| `text_area_group :attr` | Textarea |
-| `select_group :attr, options` | Native select |
-| `slim_select_group :attr, options, form_opts, html_opts` | Enhanced searchable select |
-| `boolean_field_group :attr` | Checkbox |
-| `switch_field_group :attr` | Toggle switch |
-| `date_field_group :attr` | Date picker (Flatpickr) |
-| `datetime_field_group :attr` | DateTime picker |
-| `file_field_group :attr` | File upload |
-
-### SlimSelect (Enhanced Select)
-
-```erb
-<%# Single select %>
-<%= f.slim_select_group :status, @options, { label: "Status" }, { placeholder: "Choose..." } %>
-
-<%# Multiple select %>
-<%= f.slim_select_group :tags, @options, { label: "Tags" }, { multiple: true, placeholder: "Select..." } %>
-
-<%# With search enabled %>
-<%= f.slim_select_group :user_id, @users, { label: "User", show_search: true }, { placeholder: "Search users..." } %>
-```
-
-**Arguments:** `method`, `options_array`, `form_options_hash`, `html_options_hash`
-**Form options:** `label:`, `show_search:`, `add_items:`, `allow_deselect_option:`
-**HTML options:** `placeholder:`, `multiple:`, `disabled:`
-
-### Submit Buttons
-
-```ruby
-# Simple submit
-f.submit "Save", variant: :primary
-
-# Submit with cancel (recommended)
-f.submit_actions "Save", cancel_path: back_path
-
-# In modal forms
-f.submit_actions "Save", modal: true  # Auto-adds modal#close to cancel
-```
-
-### Field Options
-
-```ruby
-f.text_field_group :name,
-  addon_left: tag.span("@"),        # Left addon
-  addon_right: tag.button("Clear"), # Right addon
-  help: "Enter your full name"      # Help text below field
-```
-
-## Notifications & Feedback
-
-### Notification vs Message
-
-| Component | Purpose | Position | Auto-dismiss |
-|-----------|---------|----------|--------------|
-| `Notification` | Toast alerts | Fixed top-right | Yes (3s default) |
-| `Message` | Inline alerts | Inline | No |
-
-### Notification (Toast)
-
-```ruby
-Bali::Notification::Component.new(
-  type: :success,    # :success, :info, :warning, :error, :danger
-  delay: 3000,       # ms before auto-dismiss
-  fixed: true,       # fixed position (set false for inline)
-  dismiss: true      # whether it auto-dismisses
-)
-```
-
-### Message (Inline Alert)
-
-```ruby
-Bali::Message::Component.new(
-  title: "Warning",  # Bold header text
-  color: :warning,   # :primary, :secondary, :success, :danger, :warning, :info
-  size: :regular     # :small, :regular, :medium, :large
-)
-```
-
-**Note:** Notification uses `type:`, Message uses `color:` - different param names.
-
-### Loader
-
-```ruby
-Bali::Loader::Component.new(
-  text: "Loading...",  # Text below spinner
-  type: :spinner,      # :spinner, :dots, :ring, :ball, :bars, :infinity
-  size: :lg,           # :xs, :sm, :md, :lg, :xl
-  color: :primary      # semantic colors
-)
-```
-
-### FlashNotifications
-
-```erb
-<%# In layout - renders Rails flash messages as toasts %>
-<%= render Bali::FlashNotifications::Component.new(
-  notice: flash[:notice],
-  alert: flash[:alert]
-) %>
-```
-
-## Navigation
-
-### Breadcrumb
-
-```erb
-<%= render Bali::Breadcrumb::Component.new do |bc| %>
-  <%= bc.with_item(name: 'Home', href: root_path, icon_name: 'home') %>
-  <%= bc.with_item(name: 'Products', href: products_path) %>
-  <%= bc.with_item(name: 'Laptops') %>  <%# No href = active/current %>
-<% end %>
-```
-
-**Item params:** `name:`, `href:` (omit for current page), `icon_name:`, `active:`
-
-### Tabs
-
-```erb
-<%= render Bali::Tabs::Component.new(style: :border) do |tabs| %>
-  <%# Inline content tabs %>
-  <%= tabs.with_tab(title: 'Details', active: true) do %>
-    <p>Details content here</p>
-  <% end %>
-  <%= tabs.with_tab(title: 'Reviews') do %>
-    <p>Reviews content here</p>
-  <% end %>
-
-  <%# OR: Full page navigation tabs %>
-  <%= tabs.with_tab(title: 'Settings', href: settings_path) %>
-<% end %>
-```
-
-**Tab params:** `title:` (NOT name), `active:`, `icon:`, `src:` (Turbo Frame URL), `href:` (full page nav)
-**Styles:** `:default`, `:border`, `:box`, `:lift`
-**Sizes:** `:xs`, `:sm`, `:md`, `:lg`, `:xl`
+1. **Forms use FormBuilder, NOT ViewComponents.** Always specify `builder: Bali::FormBuilder` in `form_with`. Never use raw HTML with Stimulus data attributes for form fields.
+2. **Card title takes a STRING, not a block.** Use `card.with_title("Text")`. For complex titles with badges/icons, use `<h2 class="card-title">` directly in the card body.
+3. **Tooltip REQUIRES `with_trigger` slot.** There is no `content:` parameter. The tooltip text goes in the block, and the hoverable element must use `with_trigger`.
+4. **Modal header takes `title:` keyword.** Use `modal.with_header(title: "Text")`, not a block.
+5. **Table has NO pagination slot.** Use Pagy separately after the table, or use DataTable which integrates pagination.
+6. **Link uses `variant:`, not `type:`.** The `type:` parameter is deprecated.
 
 ## Common Mistakes
 
 | Wrong | Right | Why |
 |-------|-------|-----|
 | `card.with_title { "Title" }` | `card.with_title("Title")` | Takes text arg, not block |
-| `card.with_title { tag + text }` | `<h2 class="card-title">` in body | For complex titles, use raw HTML |
-| `card.with_body` | Block content | Card has no body slot |
-| `card.with_footer` | `card.with_action` | Use singular, add each action separately |
-| `Tooltip.new(content: "text")` | Block content + `with_trigger` | NO content param - see Tooltip section |
-| `Tooltip.new { button }` | `tooltip.with_trigger { button }` | MUST use trigger slot |
+| `card.with_body` / `card.with_footer` | Block content / `card.with_action` | No body/footer slots |
+| `Tooltip.new(content: "text")` | Block content + `with_trigger` | No content param |
+| `Tooltip.new { button }` | `tooltip.with_trigger { button }` | Must use trigger slot |
 | `modal.with_header { "Title" }` | `modal.with_header(title: "Title")` | Keyword arg required |
-| `modal.with_footer` | `modal.with_actions` | Different name |
+| `modal.with_footer` | `modal.with_actions` | Different slot name |
 | `table.with_pagination` | `pagy_nav(@pagy)` | Pagination is separate |
 | `Avatar.new(alt:)` | Use `picture` slot | No alt parameter |
-| `Link.new(type:)` | `Link.new(variant:)` | type is deprecated |
+| `Link.new(type:)` | `Link.new(variant:)` | `type:` is deprecated |
 | `DeleteLink.new(variant:)` | None needed | Always error-styled |
-| Raw HTML `data-controller="slim-select"` | `f.slim_select_group` | FormBuilder handles Stimulus wiring |
-| `Bali::Form::TextField::Component` | `f.text_field_group` | Forms use FormBuilder, not ViewComponents |
-| `form_with model:` (no builder) | `form_with builder: Bali::FormBuilder` | Always specify FormBuilder |
-| `Message.new(type:)` | `Message.new(color:)` | Message uses `color:`, not `type:` |
-| `Notification` for inline | `Message` for inline | Notification is toast, Message is inline |
-| `breadcrumb.with_item(current:)` | `with_item(active:)` or omit `href:` | Use `active:` not `current:` |
+| Raw HTML form fields | `f.text_field_group` etc. | FormBuilder handles wiring |
+| `form_with model:` (no builder) | `builder: Bali::FormBuilder` | Always specify builder |
+| `Message.new(type:)` | `Message.new(color:)` | Message uses `color:` |
+| `Notification` for inline | `Message` for inline | Notification = toast only |
 | `tabs.with_tab(name:)` | `tabs.with_tab(title:)` | Use `title:` not `name:` |
+| `breadcrumb.with_item(current:)` | `with_item(active:)` or omit `href:` | Use `active:` |
 
 ## Button vs Link
 
@@ -360,20 +44,101 @@ Bali::Loader::Component.new(
 | Navigation (goes to URL) | `Bali::Link::Component` |
 | Action (triggers behavior) | `Bali::Button::Component` |
 | Link styled as button | `Bali::Link::Component` with `variant:` |
+| Form submission | `f.submit` or `f.submit_actions` via FormBuilder |
+
+## Component Index
+
+Consult the appropriate reference file for detailed parameters, slots, and examples.
+
+### Forms
+- **`references/forms.md`** -- FormBuilder API, all field methods, SlimSelect, date pickers, dynamic nested fields, submit buttons
+
+### Page Layout
+- **`references/navbar.md`** -- Sticky navigation bar with brand, menus
+- **`references/side-menu.md`** -- Collapsible sidebar navigation with groups
+- **`references/page-header.md`** -- Page title/subtitle with back button
+- **`references/hero.md`** -- Large banner section
+- **`references/footer.md`** -- Page footer with sections
+- **`references/drawer.md`** -- Slide-out panel (sidebar, filters)
+- **`references/level.md`** -- Horizontal flex layout (left/right spacing)
+- **`references/columns.md`** -- Grid layout with configurable gaps
+
+### Content Cards & Containers
+- **`references/card.md`** -- Content card with title, image, actions
+- **`references/modal.md`** -- Dialog modal with header, body, actions
+- **`references/stat-card.md`** -- KPI/metric card with icon and value
+
+### Tables & Data
+- **`references/table.md`** -- Basic data table with sortable headers
+- **`references/data-table.md`** -- Full-featured table with filters, export, pagination, grid mode
+- **`references/properties-table.md`** -- Simple key-value property table
+- **`references/filters.md`** -- Advanced filter builder (Ransack integration)
+- **`references/pagination.md`** -- Pagy-integrated pagination controls
+- **`references/pagination-footer.md`** -- Pagination with summary text
+- **`references/bulk-actions.md`** -- Floating action bar for batch operations
+- **`references/sortable-list.md`** -- Drag-to-reorder lists
+
+### Navigation
+- **`references/breadcrumb.md`** -- Breadcrumb trail
+- **`references/tabs.md`** -- Inline content tabs and page navigation
+- **`references/stepper.md`** -- Multi-step process indicator
+- **`references/tree-view.md`** -- Nested menu tree
+
+### Elements
+- **`references/button.md`** -- Action buttons with variants and icons
+- **`references/link.md`** -- Navigation links with modal/drawer support
+- **`references/delete-link.md`** -- Destruction link with confirmation
+- **`references/tag.md`** -- Badge/label tags with custom colors
+- **`references/avatar.md`** -- User avatars with status and placeholder
+- **`references/icon.md`** -- Lucide icon system
+- **`references/boolean-icon.md`** -- True/false visual indicator
+
+### Interactive
+- **`references/tooltip.md`** -- Hover tooltip (Tippy.js)
+- **`references/dropdown.md`** -- Menu dropdown (hover/click)
+- **`references/actions-dropdown.md`** -- Row-level action menus
+- **`references/hover-card.md`** -- Async popover on hover
+- **`references/reveal.md`** -- Toggle visibility sections
+- **`references/clipboard.md`** -- Copy-to-clipboard
+
+### Lists & Display
+- **`references/list.md`** -- Styled list container
+- **`references/label-value.md`** -- Label-value pair display
+- **`references/info-level.md`** -- Horizontal info items
+- **`references/image-grid.md`** -- Responsive image gallery
+- **`references/timeline.md`** -- Chronological event display
+- **`references/timeago.md`** -- Relative time formatting
+
+### Feedback & Status
+- **`references/feedback.md`** -- Notification (toast), Message (inline), Loader, FlashNotifications
+- **`references/progress.md`** -- Progress bar with percentage
+- **`references/skeleton.md`** -- Loading placeholder variants
+- **`references/rate.md`** -- Star rating component
+
+### Rich Content & Media
+- **`references/rich-text-editor.md`** -- WYSIWYG HTML editor
+- **`references/direct-upload.md`** -- File upload to cloud storage (Active Storage)
+- **`references/carousel.md`** -- Image carousel (Glide.js)
+- **`references/search-input.md`** -- Search field with auto-submit
+
+### Data Visualization
+- **`references/chart.md`** -- Chart.js wrapper (bar, line, pie, doughnut)
+- **`references/calendar.md`** -- Month/week/day calendar view
+- **`references/heatmap.md`** -- Data intensity visualization
+- **`references/gantt-chart.md`** -- Project timeline with drag/resize
+- **`references/locations-map.md`** -- Google Maps integration with markers
 
 ## JavaScript Dependencies
 
-When using components that require external JS libraries, ensure they're installed:
+Some components require external JS libraries in `node_modules`:
 
-```bash
-# Required for SlimSelect
-yarn add slim-select
+| Library | Required By | Install |
+|---------|------------|---------|
+| `slim-select` | SlimSelect form fields | `yarn add slim-select` |
+| `flatpickr` | Date/DateTime pickers | `yarn add flatpickr` |
+| `tippy.js` | Tooltips, HoverCard, ActionsDropdown (popover) | `yarn add tippy.js` |
+| `glide.js` | Carousel | `yarn add @glidejs/glide` |
+| `chart.js` | Charts | `yarn add chart.js` |
+| `sortablejs` | SortableList | `yarn add sortablejs` |
 
-# Required for Datepicker
-yarn add flatpickr
-
-# Required for Tooltips
-yarn add tippy.js
-```
-
-The Bali Stimulus controllers dynamically import these libraries, but they must be in `node_modules`.
+Bali Stimulus controllers dynamically import these libraries, but they must be installed.
