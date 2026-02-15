@@ -42,8 +42,8 @@ Database-backed infrastructure with Solid Queue, Solid Cache, and Solid Cable (R
 ### `/turbo-mount-react`
 React islands architecture via the turbo-mount gem. Covers when to use React vs Hotwire, component mounting, props serialization, Turbo Stream compatibility, and cross-island communication.
 
-### `/jsonapi-endpoints`
-JSON:API spec-compliant API development. Covers response structure, controller patterns, serialization, pagination, sparse fieldsets, error format, and testing API endpoints.
+### `/api-endpoints`
+RESTful API development with Blueprinter serialization. Covers response structure, controller patterns, composable blueprint views, Pagy pagination, Ransack filtering, and testing API endpoints.
 
 ### `/afal-concerns`
 Catalog of reusable Rails model concerns (OwnedByOrganization, Evidenceable, Auditable, Archivable, etc.). Covers composition patterns and when to create new concerns.
