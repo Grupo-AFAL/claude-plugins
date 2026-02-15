@@ -546,6 +546,108 @@ order = Order.find_by(id: params[:id])
 # Returns nil if not found, no exception
 ```
 
+## Banned Dependencies (AFAL Stack)
+
+### Using Banned Gems
+
+**Problem:** Including gems that conflict with AFAL stack decisions.
+
+**Anti-Patterns:**
+```ruby
+# Gemfile
+gem 'devise'           # AFAL uses OmniAuth with AFAL IdP
+gem 'cancancan'        # AFAL uses Pundit
+gem 'sidekiq'          # AFAL uses Solid Queue
+gem 'redis'            # AFAL uses Solid Cache/Cable
+gem 'rspec-rails'      # AFAL uses Minitest
+gem 'factory_bot'      # AFAL uses fixtures
+gem 'jbuilder'         # AFAL uses Blueprinter (JSON:API)
+gem 'sprockets'        # AFAL uses Propshaft
+```
+
+**Solution:**
+```ruby
+# Use AFAL stack replacements
+gem 'omniauth-afal'    # Authentication via AFAL IdP
+gem 'pundit'           # Authorization policies
+gem 'solid_queue'      # Background jobs
+gem 'solid_cache'      # Caching
+gem 'solid_cable'      # WebSockets
+# Minitest is default - no gem needed
+# Use fixtures in test/fixtures/
+gem 'blueprinter'      # JSON:API serialization
+gem 'propshaft'        # Asset pipeline
+```
+
+### Using Sprockets Instead of Propshaft
+
+**Problem:** Sprockets is deprecated in Rails 7+. AFAL uses Propshaft + importmap-rails.
+
+**Anti-Pattern:**
+```ruby
+# config/application.rb
+require 'sprockets/railtie'
+
+# Gemfile
+gem 'sprockets-rails'
+```
+
+**Solution:**
+```ruby
+# Gemfile
+gem 'propshaft'
+gem 'importmap-rails'
+
+# config/importmap.rb
+pin "application"
+pin "@hotwired/turbo-rails", to: "turbo.min.js"
+pin "@hotwired/stimulus", to: "stimulus.min.js"
+pin "library", to: "https://cdn.example.com/library.js"
+```
+
+### Not Using Current Attributes Pattern
+
+**Problem:** Passing current_user/session everywhere instead of using Current.
+
+**Anti-Pattern:**
+```ruby
+class Post < ApplicationRecord
+  belongs_to :creator, class_name: 'User'
+end
+
+# In controller
+def create
+  @post = Post.new(post_params.merge(creator: current_user))
+  @post.save
+end
+```
+
+**Solution:**
+```ruby
+# app/models/current.rb
+class Current < ActiveSupport::CurrentAttributes
+  attribute :user, :session, :account
+end
+
+# In Authentication concern
+def resume_session
+  Current.user = authenticated_user
+  Current.account = authenticated_account
+end
+
+# In model
+class Post < ApplicationRecord
+  belongs_to :creator, class_name: 'User', default: -> { Current.user }
+  belongs_to :account, default: -> { Current.account }
+end
+
+# In controller (no user passing needed)
+def create
+  @post = Post.create(post_params)
+  # creator and account set automatically via defaults
+end
+```
+
 ## Summary
 
 When reviewing code, ask:
@@ -554,5 +656,6 @@ When reviewing code, ask:
 - Would DHH approve?
 - Is this code easy to understand and maintain?
 - Does this add unnecessary abstraction or indirection?
+- Does this use AFAL stack replacements instead of banned gems?
 
 If the answer is no to any of these, it's likely an anti-pattern.

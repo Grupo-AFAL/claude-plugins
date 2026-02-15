@@ -100,6 +100,37 @@ def create
 end
 ```
 
+### Conditional Frame Responses
+
+Use `turbo_frame_request?` helper to branch response logic in controllers:
+
+```ruby
+def show
+  @message = Message.find(params[:id])
+
+  respond_to do |format|
+    format.html do
+      if turbo_frame_request?
+        render partial: "message_frame", locals: { message: @message }
+      else
+        render :show # Full page with layout
+      end
+    end
+  end
+end
+```
+
+Or simplify with separate templates:
+
+```ruby
+def show
+  @message = Message.find(params[:id])
+  # Rails automatically picks show.html.erb or show.turbo_frame.erb
+end
+```
+
+The `turbo_frame_request?` helper detects when a request comes from a Turbo Frame and allows you to return different content (e.g., partial vs full page).
+
 ## Inline Editing Pattern
 
 Click to edit, submit to save. Uses frame swap between show and edit states.

@@ -12,115 +12,124 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 
+OmniAuth.config.test_mode = true
+
 class ActiveSupport::TestCase
   fixtures :all
-
-  # Sign in a user for controller/integration tests
-  def sign_in(user)
-    session[:user_id] = user.id
-  end
-
-  # Sign out current user
-  def sign_out
-    session.delete(:user_id)
-  end
 end
 
 class ActionDispatch::IntegrationTest
-  # Integration tests need explicit session access
   def sign_in(user)
-    post auth_callback_path, params: {}, session: { user_id: user.id }
+    session = user.sessions.create!(
+      user_agent: "Test",
+      ip_address: "127.0.0.1"
+    )
+    cookies.signed[:session_id] = session.id
+  end
+
+  def sign_out
+    cookies.delete(:session_id)
   end
 end
 ```
 
-## OmniAuth Test Mode
+Key details:
+- `sign_in` creates a real database Session record (matching production behavior)
+- Sets `cookies.signed[:session_id]` (NOT `session[:user_id]`)
+- `OmniAuth.config.test_mode = true` enables mock auth hashes
 
-Configure OmniAuth for testing:
+## Fixtures
 
-```ruby
-# config/initializers/omniauth.rb
-if Rails.env.test?
-  OmniAuth.config.test_mode = true
-
-  # Default mock auth hash
-  OmniAuth.config.mock_auth[:afal] = OmniAuth::AuthHash.new({
-    provider: 'afal',
-    uid: '12345',
-    info: {
-      email: 'test@example.com',
-      name: 'Test User',
-      first_name: 'Test',
-      last_name: 'User',
-      organization_id: 'org_123',
-      organization_name: 'Test Org'
-    },
-    credentials: {
-      token: 'mock_token',
-      refresh_token: 'mock_refresh_token',
-      expires_at: 1.hour.from_now.to_i
-    }
-  })
-end
-```
-
-## Fixtures for Users
+### Users
 
 ```yaml
 # test/fixtures/users.yml
 alice:
   email: alice@example.com
   name: Alice Anderson
-  first_name: Alice
-  last_name: Anderson
-  provider: afal
-  uid: uid_alice_001
+  idp_id: idp_alice_001
+  employee_id: EMP001
+  roles:
+    - admin
+    - manager
   organization: acme
 
 bob:
   email: bob@example.com
   name: Bob Builder
-  first_name: Bob
-  last_name: Builder
-  provider: afal
-  uid: uid_bob_002
-  organization: builders_inc
-
-admin:
-  email: admin@example.com
-  name: Admin User
-  first_name: Admin
-  last_name: User
-  provider: afal
-  uid: uid_admin_003
+  idp_id: idp_bob_002
+  employee_id: EMP002
+  roles:
+    - member
   organization: acme
-  role: admin
+
+carol:
+  email: carol@example.com
+  name: Carol Chen
+  idp_id: idp_carol_003
+  employee_id: EMP003
+  roles:
+    - member
+  organization: builders_inc
 ```
+
+Key details:
+- Use `idp_id` (NOT `provider`/`uid` composite)
+- `roles` is a PostgreSQL array
+- Users from different organizations for testing multi-tenancy
+
+### Organizations
 
 ```yaml
 # test/fixtures/organizations.yml
 acme:
-  external_id: org_acme_001
   name: ACME Corporation
 
 builders_inc:
-  external_id: org_builders_002
   name: Builders Inc
 ```
 
-## Testing Controller Authentication
+### Sessions
 
-### Testing Protected Actions
+```yaml
+# test/fixtures/sessions.yml
+alice_session:
+  user: alice
+  user_agent: "Mozilla/5.0 Test"
+  ip_address: "127.0.0.1"
+```
+
+## OmniAuth Mock Configuration
+
+Configure mock auth hashes for callback tests:
+
+```ruby
+# In test setup or test_helper.rb
+OmniAuth.config.mock_auth[:afal_idp] = OmniAuth::AuthHash.new({
+  provider: 'afal_idp',
+  uid: 'new_user_123',
+  info: {
+    email: 'newuser@example.com',
+    name: 'New User',
+    employee_id: 'EMP999'
+  },
+  extra: {
+    roles: ['member'],
+    organization: { id: 1, name: 'ACME' }
+  }
+})
+```
+
+**IMPORTANT**: The provider key is `:afal_idp` (NOT `:afal`).
+
+## Testing Protected Actions
 
 ```ruby
 # test/controllers/dashboard_controller_test.rb
-require "test_helper"
-
 class DashboardControllerTest < ActionDispatch::IntegrationTest
-  test "redirects unauthenticated user" do
+  test "redirects unauthenticated user to sign in" do
     get dashboard_path
-    assert_redirected_to root_path
-    assert_equal "Please sign in to continue", flash[:alert]
+    assert_redirected_to new_session_path
   end
 
   test "shows dashboard to authenticated user" do
@@ -128,21 +137,12 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     get dashboard_path
     assert_response :success
   end
-
-  test "loads current user data" do
-    sign_in users(:alice)
-    get dashboard_path
-    assert_equal users(:alice), assigns(:current_user)
-  end
 end
 ```
 
-### Testing Public Actions
+## Testing Public Actions
 
 ```ruby
-# test/controllers/home_controller_test.rb
-require "test_helper"
-
 class HomeControllerTest < ActionDispatch::IntegrationTest
   test "shows home page without authentication" do
     get root_path
@@ -151,7 +151,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
   test "shows sign in link when not authenticated" do
     get root_path
-    assert_select "a[href=?]", "/auth/afal", text: "Sign In"
+    assert_select "a[href=?]", new_session_path
   end
 
   test "shows user name when authenticated" do
@@ -164,290 +164,138 @@ end
 
 ## Testing Sessions Controller
 
-### Testing OAuth Callback
+### OAuth Callback
 
 ```ruby
-# test/controllers/sessions_controller_test.rb
-require "test_helper"
-
 class SessionsControllerTest < ActionDispatch::IntegrationTest
-  setup do
-    OmniAuth.config.test_mode = true
-  end
-
-  test "creates session from omniauth callback" do
-    OmniAuth.config.mock_auth[:afal] = OmniAuth::AuthHash.new({
-      provider: 'afal',
-      uid: 'new_user_123',
+  test "creates user and session from omniauth callback" do
+    OmniAuth.config.mock_auth[:afal_idp] = OmniAuth::AuthHash.new({
+      provider: 'afal_idp',
+      uid: 'new_user_456',
       info: {
-        email: 'newuser@example.com',
+        email: 'new@example.com',
         name: 'New User',
-        first_name: 'New',
-        last_name: 'User',
-        organization_id: 'org_acme_001'
+        employee_id: 'EMP456'
+      },
+      extra: {
+        roles: ['member'],
+        organization: { id: 1, name: 'ACME' }
       }
     })
 
-    assert_difference 'User.count', 1 do
-      get auth_callback_path
+    assert_difference ['User.count', 'Session.count'], 1 do
+      get '/auth/afal_idp/callback'
     end
 
     assert_redirected_to root_path
-    assert session[:user_id].present?
-    assert_equal 'Welcome back, New User!', flash[:notice]
+    assert cookies[:session_id].present?
   end
 
-  test "finds existing user on callback" do
+  test "finds existing user on callback without creating new one" do
     existing_user = users(:alice)
 
-    OmniAuth.config.mock_auth[:afal] = OmniAuth::AuthHash.new({
-      provider: existing_user.provider,
-      uid: existing_user.uid,
+    OmniAuth.config.mock_auth[:afal_idp] = OmniAuth::AuthHash.new({
+      provider: 'afal_idp',
+      uid: existing_user.idp_id,
       info: {
         email: existing_user.email,
-        name: 'Alice Updated Name',
-        organization_id: organizations(:acme).external_id
+        name: existing_user.name,
+        employee_id: existing_user.employee_id
+      },
+      extra: {
+        roles: ['admin', 'manager'],
+        organization: { id: 1, name: 'ACME' }
       }
     })
 
     assert_no_difference 'User.count' do
-      get auth_callback_path
+      assert_difference 'Session.count', 1 do
+        get '/auth/afal_idp/callback'
+      end
     end
 
     assert_redirected_to root_path
-    assert_equal existing_user.id, session[:user_id]
   end
 
   test "handles authentication failure" do
-    OmniAuth.config.mock_auth[:afal] = :invalid_credentials
+    OmniAuth.config.mock_auth[:afal_idp] = :invalid_credentials
 
-    get auth_callback_path
+    get '/auth/failure?message=invalid_credentials'
 
     assert_redirected_to root_path
     assert_match /Authentication failed/, flash[:alert]
-    assert_nil session[:user_id]
   end
 
   test "destroys session on sign out" do
     sign_in users(:alice)
+    session_count = users(:alice).sessions.count
 
-    delete sign_out_path
+    delete session_path
 
     assert_redirected_to root_path
-    assert_nil session[:user_id]
-    assert_equal 'You have been signed out.', flash[:notice]
+    assert_equal session_count - 1, users(:alice).sessions.count
   end
 end
 ```
 
-## Integration Test Authentication
+## Testing User Model
 
 ```ruby
-# test/integration/user_flow_test.rb
-require "test_helper"
-
-class UserFlowTest < ActionDispatch::IntegrationTest
-  test "complete sign in and access protected resource" do
-    # Visit home page
-    get root_path
-    assert_response :success
-
-    # Click sign in (simulated via OmniAuth test mode)
-    OmniAuth.config.mock_auth[:afal] = OmniAuth::AuthHash.new({
-      provider: 'afal',
-      uid: users(:alice).uid,
-      info: { email: users(:alice).email, name: users(:alice).name }
-    })
-
-    get auth_callback_path
-    follow_redirect!
-    assert_equal root_path, path
-
-    # Access protected dashboard
-    get dashboard_path
-    assert_response :success
-
-    # Sign out
-    delete sign_out_path
-    follow_redirect!
-
-    # Cannot access dashboard after sign out
-    get dashboard_path
-    assert_redirected_to root_path
-  end
-end
-```
-
-## System Test Authentication
-
-For Capybara/system tests with OmniAuth:
-
-```ruby
-# test/system/authentication_test.rb
-require "application_system_test_case"
-
-class AuthenticationTest < ApplicationSystemTestCase
-  setup do
-    OmniAuth.config.test_mode = true
-    OmniAuth.config.mock_auth[:afal] = OmniAuth::AuthHash.new({
-      provider: 'afal',
-      uid: 'system_test_user',
-      info: {
-        email: 'systemtest@example.com',
-        name: 'System Test User',
-        organization_id: organizations(:acme).external_id
-      }
-    })
-  end
-
-  test "signing in via AFAL IdP" do
-    visit root_path
-    click_on "Sign In"
-
-    # After OmniAuth redirect (mocked)
-    assert_text "Welcome back, System Test User!"
-    assert_text "System Test User" # Header shows user name
-  end
-
-  test "accessing protected page requires sign in" do
-    visit dashboard_path
-    assert_current_path root_path
-    assert_text "Please sign in"
-  end
-
-  test "signing out" do
-    visit root_path
-    click_on "Sign In"
-
-    assert_text "System Test User"
-
-    click_on "Sign Out"
-    assert_text "You have been signed out"
-    assert_no_text "System Test User"
-  end
-end
-```
-
-## Testing Organization Scoping
-
-```ruby
-# test/integration/organization_scoping_test.rb
-require "test_helper"
-
-class OrganizationScopingTest < ActionDispatch::IntegrationTest
-  test "user sees only their organization data" do
-    sign_in users(:alice) # ACME org
-
-    get projects_path
-    assert_response :success
-
-    # Alice sees ACME projects
-    assert_select "h2", text: /ACME Project/
-
-    # Alice does not see Builders Inc projects
-    assert_select "h2", text: /Builders Project/, count: 0
-  end
-
-  test "switching organizations updates context" do
-    alice = users(:alice)
-    alice.organizations << organizations(:builders_inc)
-
-    sign_in alice
-
-    # Initially in ACME
-    get root_path
-    assert_select "span", text: /ACME Corporation/
-
-    # Switch to Builders Inc
-    post organization_switch_path(organization_id: organizations(:builders_inc).id)
-    follow_redirect!
-
-    assert_select "span", text: /Builders Inc/
-  end
-end
-```
-
-## Testing User Model from_omniauth
-
-```ruby
-# test/models/user_test.rb
-require "test_helper"
-
 class UserTest < ActiveSupport::TestCase
   test "creates user from omniauth hash" do
-    auth_hash = OmniAuth::AuthHash.new({
-      provider: 'afal',
-      uid: 'new_uid_789',
+    auth = OmniAuth::AuthHash.new({
+      uid: 'brand_new_user',
       info: {
-        email: 'newmodel@example.com',
-        name: 'Model Test User',
-        first_name: 'Model',
-        last_name: 'Test',
-        organization_id: organizations(:acme).external_id
+        email: 'brand_new@example.com',
+        name: 'Brand New User',
+        employee_id: 'EMP_NEW'
+      },
+      extra: {
+        roles: ['member'],
+        organization: { id: organizations(:acme).id, name: 'ACME' }
       }
     })
 
     assert_difference 'User.count', 1 do
-      user = User.from_omniauth(auth_hash)
+      user = User.find_or_create_from_omniauth(auth)
       assert user.persisted?
-      assert_equal 'newmodel@example.com', user.email
-      assert_equal 'Model Test User', user.name
-      assert_equal organizations(:acme), user.organization
+      assert_equal 'brand_new@example.com', user.email
+      assert_equal 'brand_new_user', user.idp_id
+      assert_equal ['member'], user.roles
     end
   end
 
-  test "updates existing user from omniauth hash" do
-    existing_user = users(:alice)
+  test "finds existing user without updating attributes" do
+    alice = users(:alice)
+    original_name = alice.name
 
-    auth_hash = OmniAuth::AuthHash.new({
-      provider: existing_user.provider,
-      uid: existing_user.uid,
+    auth = OmniAuth::AuthHash.new({
+      uid: alice.idp_id,
       info: {
-        email: existing_user.email,
-        name: 'Updated Name',
-        organization_id: organizations(:acme).external_id
-      }
+        email: 'different@example.com',
+        name: 'Different Name',
+        employee_id: 'DIFF'
+      },
+      extra: { roles: ['different_role'] }
     })
 
     assert_no_difference 'User.count' do
-      user = User.from_omniauth(auth_hash)
-      assert_equal existing_user.id, user.id
-      assert_equal 'Updated Name', user.name
+      user = User.find_or_create_from_omniauth(auth)
+      assert_equal alice.id, user.id
+      assert_equal original_name, user.name  # NOT updated
     end
   end
 
-  test "creates organization if not exists" do
-    auth_hash = OmniAuth::AuthHash.new({
-      provider: 'afal',
-      uid: 'new_org_user',
-      info: {
-        email: 'neworg@example.com',
-        name: 'New Org User',
-        organization_id: 'org_new_999'
-      }
-    })
-
-    assert_difference 'Organization.count', 1 do
-      user = User.from_omniauth(auth_hash)
-      assert user.organization.present?
-      assert_equal 'org_new_999', user.organization.external_id
-    end
+  test "has_role? checks roles array" do
+    alice = users(:alice)
+    assert alice.has_role?('admin')
+    assert alice.has_role?('manager')
+    refute alice.has_role?('viewer')
   end
 
-  test "handles missing organization gracefully" do
-    auth_hash = OmniAuth::AuthHash.new({
-      provider: 'afal',
-      uid: 'no_org_user',
-      info: {
-        email: 'noorg@example.com',
-        name: 'No Org User',
-        organization_id: nil
-      }
-    })
-
-    user = User.from_omniauth(auth_hash)
-    assert user.persisted?
-    assert_nil user.organization
+  test "admin? is shorthand for admin role" do
+    assert users(:alice).admin?
+    refute users(:bob).admin?
   end
 end
 ```
@@ -455,139 +303,99 @@ end
 ## Testing Current Attributes
 
 ```ruby
-# test/models/current_test.rb
-require "test_helper"
-
 class CurrentTest < ActiveSupport::TestCase
-  test "sets user and organization" do
+  test "sets user and account" do
     user = users(:alice)
     Current.user = user
-    Current.organization = user.organization
 
     assert_equal user, Current.user
-    assert_equal organizations(:acme), Current.organization
+    assert_equal user.account, Current.account
   end
 
   test "resets between requests" do
     Current.user = users(:alice)
-    assert_equal users(:alice), Current.user
-
-    # Simulate new request
     Current.reset
 
     assert_nil Current.user
-    assert_nil Current.organization
+    assert_nil Current.account
   end
 end
 ```
 
-## Testing Impersonation
+## Testing Organization Scoping
 
 ```ruby
-# test/controllers/admin/impersonations_controller_test.rb
-require "test_helper"
+class OrganizationScopingTest < ActionDispatch::IntegrationTest
+  test "user sees only their organization data" do
+    sign_in users(:alice)  # ACME org
 
-class Admin::ImpersonationsControllerTest < ActionDispatch::IntegrationTest
-  test "admin can impersonate user" do
-    sign_in users(:admin)
+    get projects_path
+    assert_response :success
 
-    post admin_impersonation_path(user_id: users(:alice).id)
-
-    assert_redirected_to root_path
-    assert session[:impersonated_user_id].present?
-    assert_equal users(:alice).id, session[:impersonated_user_id]
+    # Should not include other org's data
+    assert_select "h2", text: /Builders/, count: 0
   end
 
-  test "non-admin cannot impersonate" do
-    sign_in users(:alice)
+  test "user cannot access other organization resources" do
+    sign_in users(:alice)  # ACME org
+    other_org_project = projects(:builders_project)
 
-    post admin_impersonation_path(user_id: users(:bob).id)
-
-    assert_redirected_to root_path
-    assert_equal "Access denied", flash[:alert]
-    assert_nil session[:impersonated_user_id]
-  end
-
-  test "admin can stop impersonating" do
-    admin = users(:admin)
-    sign_in admin
-    session[:impersonated_user_id] = users(:alice).id
-
-    delete admin_impersonation_path
-
-    assert_redirected_to admin_users_path
-    assert_nil session[:impersonated_user_id]
+    get project_path(other_org_project)
+    assert_response :not_found  # Scoped query returns 404, not 403
   end
 end
 ```
 
-## Common Testing Patterns
+## Mock Auth Hash Helper
 
-### Custom Auth Hash Helper
+For convenience, create a reusable helper:
 
 ```ruby
-# test/support/auth_hash_helper.rb
-module AuthHashHelper
-  def mock_auth_hash(user)
-    OmniAuth::AuthHash.new({
-      provider: user.provider,
-      uid: user.uid,
+# test/support/auth_helper.rb
+module AuthHelper
+  def mock_omniauth(user)
+    OmniAuth.config.mock_auth[:afal_idp] = OmniAuth::AuthHash.new({
+      provider: 'afal_idp',
+      uid: user.idp_id,
       info: {
         email: user.email,
         name: user.name,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        organization_id: user.organization&.external_id
+        employee_id: user.employee_id
+      },
+      extra: {
+        roles: user.roles,
+        organization: {
+          id: user.organization_id,
+          name: user.organization&.name
+        }
       }
     })
   end
 end
 
-# test/test_helper.rb
-class ActiveSupport::TestCase
-  include AuthHashHelper
+# Include in test_helper.rb
+class ActionDispatch::IntegrationTest
+  include AuthHelper
 end
-
-# Usage in tests
-OmniAuth.config.mock_auth[:afal] = mock_auth_hash(users(:alice))
 ```
 
-### Testing Return Path After Login
+Usage:
 
 ```ruby
-test "redirects to original path after authentication" do
-  get dashboard_path
+test "login flow with existing user" do
+  mock_omniauth(users(:alice))
+  get '/auth/afal_idp/callback'
   assert_redirected_to root_path
-  assert_equal dashboard_path, session[:return_to]
-
-  get auth_callback_path
-  follow_redirect!
-
-  assert_equal dashboard_path, path
-  assert_nil session[:return_to]
 end
 ```
 
-## Performance Testing
+## Common Testing Mistakes
 
-For authentication-heavy tests, use fixtures efficiently:
-
-```ruby
-# Load minimal fixtures for auth tests
-class AuthenticationTest < ActionDispatch::IntegrationTest
-  fixtures :users, :organizations
-
-  # Avoid loading all fixtures if not needed
-end
-```
-
-## CI Environment Setup
-
-Ensure OmniAuth test mode is enabled in CI:
-
-```ruby
-# config/environments/test.rb
-config.after_initialize do
-  OmniAuth.config.test_mode = true
-end
-```
+| Mistake | Why It Fails | Solution |
+|---------|-------------|----------|
+| `session[:user_id] = user.id` | Not how auth works | Use `sign_in(user)` helper |
+| `mock_auth[:afal]` | Wrong provider key | Use `mock_auth[:afal_idp]` |
+| `provider: 'afal'` in mock | Wrong provider name | Use `provider: 'afal_idp'` |
+| Not creating Session record | Auth concern looks up Session | `sign_in` creates real Session |
+| Testing user attribute updates on login | `find_or_create_by!` block only runs on create | Verify attributes are NOT updated |
+| `assigns(:current_user)` | Deprecated in Rails 5+ | Check response content instead |

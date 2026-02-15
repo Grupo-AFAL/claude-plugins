@@ -107,6 +107,57 @@ if (this.hasUrlValue) {
 }
 ```
 
+## Classes (CSS Class References)
+
+Classes API allows CSS class names to be configurable via data attributes:
+
+```javascript
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+  static classes = ["hidden", "active"]
+
+  toggle() {
+    this.element.classList.toggle(this.hiddenClass)
+  }
+
+  activate() {
+    this.element.classList.add(this.activeClass)
+    this.element.classList.remove(this.hiddenClass)
+  }
+}
+```
+
+HTML:
+
+```erb
+<div data-controller="toggle"
+     data-toggle-hidden-class="hidden"
+     data-toggle-active-class="bg-primary">
+  <button data-action="toggle#toggle">Toggle</button>
+</div>
+```
+
+This allows the same controller to work with different CSS frameworks (Tailwind, Bootstrap, etc.) by configuring class names in HTML rather than hardcoding them in JavaScript.
+
+Check if class exists:
+
+```javascript
+if (this.hasHiddenClass) {
+  this.element.classList.toggle(this.hiddenClass)
+}
+```
+
+Multiple classes:
+
+```erb
+<div data-controller="toggle"
+     data-toggle-hidden-class="hidden opacity-0"
+     data-toggle-active-class="block opacity-100 transition-opacity">
+```
+
+The class value can be a space-separated list.
+
 ## Targets (Element References)
 
 Targets are references to elements within the controller's scope:

@@ -55,33 +55,31 @@ class ApplicationPolicy
   attr_reader :user, :record
 
   def initialize(user, record)
-    raise Pundit::NotAuthorizedError, "must be logged in" unless user
     @user = user
     @record = record
   end
 
-  # Default: deny all actions
-  def index? = false
-  def show? = false
-  def create? = false
+  # Default: allow read, restrict write
+  def index? = true
+  def show? = true
+  def create? = user.has_role?('admin') || user.has_role?('manager')
   def new? = create?
-  def update? = false
+  def update? = user.has_role?('admin') || user.has_role?('manager')
   def edit? = update?
-  def destroy? = false
+  def destroy? = user.has_role?('admin')
 
   class Scope
     def initialize(user, scope)
-      raise Pundit::NotAuthorizedError, "must be logged in" unless user
       @user = user
       @scope = scope
     end
 
     def resolve
-      # Default: scope to user's organization
-      if scope.respond_to?(:where)
-        scope.where(organization: user.organization)
+      # Admins see all, others see only their organization
+      if user.has_role?('admin')
+        scope.all
       else
-        scope
+        scope.where(organization: user.organization)
       end
     end
 
@@ -128,8 +126,9 @@ class PostsController < ApplicationController
   end
 
   def create
+    # Organization set automatically via model default:
+    # belongs_to :account, default: -> { Current.account }
     @post = Post.new(post_params)
-    @post.organization = current_user.organization
     authorize @post
 
     if @post.save
@@ -209,7 +208,7 @@ end
 
 ### Role-Based Authorization
 
-Check user roles in policy methods:
+Check user roles in policy methods. Note that `ApplicationPolicy` base uses `user.has_role?('admin')` for consistency, but child policies can use convenience methods like `user.admin?` if available:
 
 ```ruby
 def create?
@@ -280,7 +279,7 @@ Conditionally show UI elements based on policy:
 | Forgetting `policy_scope` | Users see other orgs' data | Use `verify_policy_scoped` after_action |
 | Wrong scope in policy | Data leakage across orgs | Always scope to `user.organization` |
 | Testing without fixtures | Incomplete test coverage | Use fixtures to set up multi-tenant scenarios |
-| Not setting `organization_id` | Validation errors | Set on create: `record.organization = current_user.organization` |
+| Not using Current defaults on model | Manual assignment is fragile | Use `belongs_to :account, default: -> { Current.account }` on model |
 | Authorizing before finding record | Wrong authorization context | Find record first, then authorize |
 
 ## Generator Pattern

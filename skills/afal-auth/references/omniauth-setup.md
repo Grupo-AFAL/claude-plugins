@@ -1,10 +1,8 @@
 # OmniAuth Setup for AFAL IdP
 
-Complete configuration for OmniAuth authentication with AFAL's identity provider.
+Complete configuration for OmniAuth authentication with AFAL's centralized identity provider.
 
-## Gem Installation
-
-Add to Gemfile:
+## Required Gems
 
 ```ruby
 gem 'omniauth'
@@ -12,82 +10,40 @@ gem 'omniauth-oauth2'
 gem 'omniauth-rails_csrf_protection'
 ```
 
-The `omniauth-rails_csrf_protection` gem is critical for security in Rails applications.
+The `omniauth-rails_csrf_protection` gem is critical -- it requires POST requests to initiate auth flows, preventing CSRF attacks.
 
-## Provider Configuration
+## Custom Strategy
 
-Create the OmniAuth initializer:
-
-```ruby
-# config/initializers/omniauth.rb
-Rails.application.config.middleware.use OmniAuth::Builder do
-  provider :afal,
-    ENV.fetch('AFAL_IDP_CLIENT_ID'),
-    ENV.fetch('AFAL_IDP_CLIENT_SECRET'),
-    client_options: {
-      site: ENV.fetch('AFAL_IDP_URL', 'https://idp.afal.com'),
-      authorize_url: '/oauth/authorize',
-      token_url: '/oauth/token',
-      user_info_url: '/oauth/userinfo'
-    },
-    scope: 'openid profile email organizations',
-    redirect_uri: ENV.fetch('AFAL_IDP_REDIRECT_URI', 'http://localhost:3000/auth/afal/callback')
-end
-
-OmniAuth.config.allowed_request_methods = [:post, :get]
-OmniAuth.config.on_failure = proc { |env|
-  SessionsController.action(:failure).call(env)
-}
-```
-
-## Environment Variables
-
-Set these in `.env` (development) and production environment:
-
-```bash
-# .env
-AFAL_IDP_CLIENT_ID=your_client_id_here
-AFAL_IDP_CLIENT_SECRET=your_client_secret_here
-AFAL_IDP_URL=https://idp.afal.com
-AFAL_IDP_REDIRECT_URI=http://localhost:3000/auth/afal/callback
-```
-
-Production should use the production IdP URL and callback URL.
-
-## AFAL Provider Strategy
-
-Create the custom AFAL strategy if not already available as a gem:
+Create the AFAL IdP strategy in `lib/omniauth/strategies/afal_idp.rb`:
 
 ```ruby
-# lib/omniauth/strategies/afal.rb
-require 'omniauth-oauth2'
-
 module OmniAuth
   module Strategies
-    class Afal < OmniAuth::Strategies::OAuth2
-      option :name, :afal
+    class AfalIdp < OmniAuth::Strategies::OAuth2
+      option :name, 'afal_idp'
 
       option :client_options, {
-        site: ENV.fetch('AFAL_IDP_URL'),
+        site: Rails.application.credentials.dig(:idp, :url),
         authorize_url: '/oauth/authorize',
         token_url: '/oauth/token'
       }
 
-      uid { raw_info['sub'] }
+      uid { raw_info['id'].to_s }
 
       info do
         {
           email: raw_info['email'],
           name: raw_info['name'],
-          first_name: raw_info['given_name'],
-          last_name: raw_info['family_name'],
-          organization_id: raw_info['organization_id'],
-          organization_name: raw_info['organization_name']
+          employee_id: raw_info['employee_id']
         }
       end
 
       extra do
-        { raw_info: raw_info }
+        {
+          raw_info: raw_info,
+          roles: raw_info['roles'] || [],
+          organization: raw_info['organization']
+        }
       end
 
       def raw_info
@@ -96,172 +52,162 @@ module OmniAuth
     end
   end
 end
-
-OmniAuth.config.add_camelization 'afal', 'Afal'
 ```
 
-Ensure `lib/` is autoloaded:
+Key details:
+- Provider name is `afal_idp` (NOT `afal`)
+- `uid` reads `raw_info['id']` (NOT `sub`)
+- `info` includes `employee_id` from IdP
+- `extra` includes `roles` (array) and `organization` (hash)
+- Client options use `Rails.application.credentials`, NOT ENV vars
+
+## OmniAuth Initializer
 
 ```ruby
-# config/application.rb
-config.autoload_paths << Rails.root.join('lib')
+# config/initializers/omniauth.rb
+Rails.application.config.middleware.use OmniAuth::Builder do
+  provider :afal_idp,
+    Rails.application.credentials.dig(:idp, :client_id),
+    Rails.application.credentials.dig(:idp, :client_secret),
+    scope: 'read write'
+end
 ```
 
-## Sessions Controller
+**IMPORTANT**: Always use `Rails.application.credentials.dig(:idp, ...)`. Never use ENV vars for IdP credentials.
 
-Handle the OmniAuth callback:
+Store credentials via:
+
+```bash
+rails credentials:edit
+```
+
+```yaml
+# config/credentials.yml.enc
+idp:
+  url: https://id.afal.mx
+  client_id: your_client_id
+  client_secret: your_client_secret
+```
+
+## User Model
 
 ```ruby
-# app/controllers/sessions_controller.rb
-class SessionsController < ApplicationController
-  skip_before_action :authenticate_user!, only: [:create, :failure]
+class User < ApplicationRecord
+  has_many :sessions, dependent: :destroy
 
-  def create
-    auth = request.env['omniauth.auth']
-    user = User.from_omniauth(auth)
+  validates :email, presence: true, uniqueness: true
+  validates :idp_id, presence: true, uniqueness: true
 
-    if user.persisted?
-      session[:user_id] = user.id
-      redirect_to session.delete(:return_to) || root_path,
-                  notice: "Welcome back, #{user.name}!"
-    else
-      redirect_to root_path,
-                  alert: "Authentication failed. Please try again."
+  def self.find_or_create_from_omniauth(auth)
+    find_or_create_by!(idp_id: auth.uid) do |user|
+      user.email = auth.info.email
+      user.name = auth.info.name
+      user.employee_id = auth.info.employee_id
+      user.roles = auth.extra.roles
+      user.organization = auth.extra.organization
     end
   end
 
-  def destroy
-    session.delete(:user_id)
-    redirect_to root_path, notice: "You have been signed out."
+  def has_role?(role_name)
+    roles.include?(role_name)
   end
 
-  def failure
-    redirect_to root_path,
-                alert: "Authentication failed: #{params[:message]}"
+  def admin?
+    has_role?('admin')
   end
 end
 ```
 
-## User Model Implementation
+Critical patterns:
+- **Single `idp_id` field** -- there is only one IdP, so composite `provider`/`uid` is unnecessary
+- **`find_or_create_by!` with block** -- attributes in the block are only set on **create**, not updated every login. This prevents overwriting local changes to user data.
+- **`roles` is a collection** -- PostgreSQL array column or JSON, not a single string
+- **`employee_id`** tracked from IdP response
 
-Create or update the User model:
-
-```ruby
-# app/models/user.rb
-class User < ApplicationRecord
-  belongs_to :organization
-
-  validates :email, presence: true, uniqueness: true
-  validates :provider, :uid, presence: true
-
-  def self.from_omniauth(auth_hash)
-    user = find_or_initialize_by(
-      provider: auth_hash.provider,
-      uid: auth_hash.uid
-    )
-
-    user.assign_attributes(
-      email: auth_hash.info.email,
-      name: auth_hash.info.name,
-      first_name: auth_hash.info.first_name,
-      last_name: auth_hash.info.last_name,
-      organization_id: find_or_create_organization(auth_hash.info.organization_id)
-    )
-
-    user.save!
-    user
-  rescue ActiveRecord::RecordInvalid => e
-    Rails.logger.error "Failed to create/update user from OmniAuth: #{e.message}"
-    nil
-  end
-
-  private
-
-  def self.find_or_create_organization(org_id)
-    return nil unless org_id
-    Organization.find_or_create_by!(external_id: org_id)
-  end
-end
-```
-
-## Migration for Users
+## User Migration
 
 ```ruby
-# db/migrate/YYYYMMDDHHMMSS_create_users.rb
 class CreateUsers < ActiveRecord::Migration[8.1]
   def change
     create_table :users do |t|
       t.string :email, null: false
       t.string :name
-      t.string :first_name
-      t.string :last_name
-      t.string :provider, null: false
-      t.string :uid, null: false
+      t.string :idp_id, null: false
+      t.string :employee_id
+      t.string :roles, array: true, default: []
       t.references :organization, foreign_key: true
 
       t.timestamps
     end
 
     add_index :users, :email, unique: true
-    add_index :users, [:provider, :uid], unique: true
+    add_index :users, :idp_id, unique: true
   end
 end
 ```
 
-## Handling First-Time Users vs Returning Users
-
-The `from_omniauth` method handles both cases:
-
-**First-time users:**
-- `find_or_initialize_by` creates new record
-- `assign_attributes` sets profile data
-- `save!` persists to database
-- Organization created if doesn't exist
-
-**Returning users:**
-- `find_or_initialize_by` finds existing record
-- `assign_attributes` updates profile data (name changes, etc.)
-- `save!` persists updates
-- Organization reference updated if changed at IdP
-
-## Organization Assignment
-
-Organizations come from the IdP. Create Organization model:
+## Sessions Controller
 
 ```ruby
-# app/models/organization.rb
-class Organization < ApplicationRecord
-  has_many :users
+class SessionsController < ApplicationController
+  allow_unauthenticated_access only: [:new, :create, :failure]
 
-  validates :external_id, presence: true, uniqueness: true
-end
-```
+  def new
+    redirect_to '/auth/afal_idp'
+  end
 
-Migration:
+  def create
+    auth = request.env['omniauth.auth']
+    user = User.find_or_create_from_omniauth(auth)
 
-```ruby
-# db/migrate/YYYYMMDDHHMMSS_create_organizations.rb
-class CreateOrganizations < ActiveRecord::Migration[8.1]
-  def change
-    create_table :organizations do |t|
-      t.string :external_id, null: false
-      t.string :name
+    session = user.sessions.create!(
+      user_agent: request.user_agent,
+      ip_address: request.remote_ip
+    )
 
-      t.timestamps
-    end
+    cookies.signed[:session_id] = {
+      value: session.id,
+      httponly: true,
+      secure: Rails.env.production?
+    }
 
-    add_index :organizations, :external_id, unique: true
+    redirect_to root_path, notice: "Signed in successfully"
+  end
+
+  def destroy
+    Current.session&.destroy
+    cookies.delete(:session_id)
+    redirect_to root_path, notice: "Signed out"
+  end
+
+  def failure
+    redirect_to root_path, alert: "Authentication failed: #{params[:message]}"
   end
 end
 ```
+
+Key patterns:
+- Uses `allow_unauthenticated_access` (opt-out), NOT `skip_before_action :authenticate_user!`
+- Creates a database-backed `Session` record (NOT `session[:user_id]`)
+- Sets `cookies.signed[:session_id]` (NOT Rails session hash)
+- `new` redirects to `/auth/afal_idp` (the OmniAuth middleware handles the rest)
+
+## Routes
+
+```ruby
+# config/routes.rb
+get '/auth/:provider/callback', to: 'sessions#create'
+get '/auth/failure', to: 'sessions#failure'
+resource :session, only: [:new, :destroy]
+```
+
+The `/auth/afal_idp` route is handled automatically by OmniAuth middleware -- no explicit route needed.
 
 ## Error Handling
 
-Handle common failure scenarios:
+Handle common failure scenarios in the `failure` action:
 
-**IdP Unavailable:**
 ```ruby
-# In sessions#failure
 def failure
   error_message = case params[:message]
   when 'timeout'
@@ -278,81 +224,35 @@ def failure
 end
 ```
 
-**User Save Failures:**
-```ruby
-def create
-  auth = request.env['omniauth.auth']
-  user = User.from_omniauth(auth)
+## IdP Data Mapping
 
-  if user&.persisted?
-    session[:user_id] = user.id
-    redirect_to root_path, notice: "Welcome!"
-  else
-    Rails.logger.error "User creation failed for #{auth.info.email}"
-    redirect_to root_path,
-                alert: "Could not create your account. Please contact support."
-  end
-end
-```
-
-## Profile Data Mapping
-
-The IdP provides standardized claims:
-
-| IdP Claim | User Attribute | Notes |
+| IdP Field | User Attribute | Notes |
 |-----------|----------------|-------|
-| sub | uid | Unique identifier |
+| id | idp_id | Unique identifier at IdP |
 | email | email | Primary email |
 | name | name | Full name |
-| given_name | first_name | First name |
-| family_name | last_name | Last name |
-| organization_id | organization_id | Foreign key |
-| organization_name | - | Not stored, available in session |
+| employee_id | employee_id | AFAL employee number |
+| roles | roles | Array of role strings |
+| organization | organization | Organization hash (id, name) |
 
-Additional custom claims can be requested via the scope parameter.
-
-## Routes Configuration
-
-```ruby
-# config/routes.rb
-Rails.application.routes.draw do
-  # OmniAuth routes
-  get '/auth/:provider/callback', to: 'sessions#create'
-  post '/auth/:provider/callback', to: 'sessions#create' # POST for CSRF protection
-  get '/auth/failure', to: 'sessions#failure'
-
-  # Session management
-  delete '/sign_out', to: 'sessions#destroy', as: :sign_out
-
-  # Optional: explicit sign in path
-  get '/sign_in', to: redirect('/auth/afal')
-end
-```
-
-## View Helper for Sign In
+## Sign In Link
 
 ```erb
-<!-- app/views/layouts/_header.html.erb -->
-<% if logged_in? %>
+<% if authenticated? %>
   <span>Signed in as <%= current_user.name %></span>
-  <%= button_to "Sign Out", sign_out_path, method: :delete %>
+  <%= button_to "Sign Out", session_path, method: :delete %>
 <% else %>
-  <%= link_to "Sign In", "/auth/afal" %>
+  <%= link_to "Sign In", new_session_path %>
 <% end %>
 ```
 
-## CSRF Protection
+## Common Mistakes
 
-The `omniauth-rails_csrf_protection` gem requires POST requests to initiate auth. Update sign-in links to use forms:
-
-```erb
-<%= button_to "Sign In", "/auth/afal", method: :post %>
-```
-
-Or configure OmniAuth to allow GET (less secure):
-
-```ruby
-OmniAuth.config.allowed_request_methods = [:post, :get]
-```
-
-Use POST in production environments.
+| Mistake | Why It Fails | Solution |
+|---------|-------------|----------|
+| Provider name `:afal` | Wrong provider name | Use `'afal_idp'` |
+| ENV vars for credentials | Not AFAL standard | Use `Rails.application.credentials.dig(:idp, ...)` |
+| `provider`/`uid` composite key | Unnecessary complexity | Single `idp_id` field |
+| Updating user on every login | Overwrites local changes | Use `find_or_create_by!` with block |
+| `raw_info['sub']` for uid | Wrong IdP claim | Use `raw_info['id']` |
+| Storing roles as string | Can't query properly | Use PostgreSQL array column |

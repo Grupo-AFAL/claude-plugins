@@ -1,381 +1,235 @@
 # Session Management
 
-Patterns for managing user sessions, organization context, and advanced session scenarios in AFAL Rails applications.
+Database-backed session management following the 37signals pattern used in AFAL Rails applications.
 
-## Session Storage
+## Session Model
 
-Rails uses encrypted cookie-based sessions by default. This is appropriate for AFAL apps.
-
-```ruby
-# config/initializers/session_store.rb
-Rails.application.config.session_store :cookie_store,
-  key: '_afal_app_session',
-  secure: Rails.env.production?, # HTTPS only in production
-  httponly: true,                # Prevent JavaScript access
-  same_site: :lax                # CSRF protection
-```
-
-The session stores only the `user_id`. User data loads from the database on each request.
-
-## Current Pattern
-
-Use `Current` attributes for request-scoped data:
+Sessions are stored in the database for audit trail and explicit lifecycle management:
 
 ```ruby
-# app/models/current.rb
-class Current < ActiveSupport::CurrentAttributes
-  attribute :user, :organization
+class Session < ApplicationRecord
+  belongs_to :user
 end
 ```
 
-Set in ApplicationController:
+Migration:
 
 ```ruby
-# app/controllers/concerns/set_current.rb
-module SetCurrent
-  extend ActiveSupport::Concern
-
-  included do
-    before_action :set_current_attributes
-  end
-
-  private
-
-  def set_current_attributes
-    Current.user = current_user
-    Current.organization = current_user&.organization
+class CreateSessions < ActiveRecord::Migration[8.1]
+  def change
+    create_table :sessions do |t|
+      t.references :user, null: false, foreign_key: true
+      t.string :user_agent
+      t.string :ip_address
+      t.timestamps
+    end
   end
 end
-
-# app/controllers/application_controller.rb
-class ApplicationController < ActionController::Base
-  include Authentication
-  include SetCurrent
-end
 ```
 
-Now `Current.user` and `Current.organization` are available throughout the request lifecycle (models, jobs, etc.).
+Each login creates a new Session record. This provides:
+- Audit trail of all sign-ins
+- User agent and IP tracking
+- Ability to list/revoke active sessions
+- No reliance on cookie-stored session data
 
-## Session Timeout
+## Cookie-Based Session Tracking
 
-Implement timeout using session timestamps:
+Sessions are tracked via `cookies.signed[:session_id]`, NOT Rails' `session[:user_id]`:
+
+```ruby
+# Setting the cookie (in SessionsController#create)
+cookies.signed[:session_id] = {
+  value: session.id,
+  httponly: true,
+  secure: Rails.env.production?
+}
+
+# Clearing the cookie (in SessionsController#destroy)
+cookies.delete(:session_id)
+```
+
+Why `cookies.signed` instead of `session`:
+- The Session model provides server-side state
+- `cookies.signed` is tamper-proof (signed with app secret)
+- The session record can be destroyed server-side to force logout
+- No dependency on Rails session store configuration
+
+## Authentication Concern
+
+The Authentication concern implements the opt-out pattern (all actions require auth by default):
 
 ```ruby
 # app/controllers/concerns/authentication.rb
 module Authentication
   extend ActiveSupport::Concern
 
-  TIMEOUT_DURATION = 2.hours
-
   included do
-    before_action :check_session_timeout
+    before_action :require_authentication
+    helper_method :authenticated?, :current_user
+  end
+
+  class_methods do
+    def allow_unauthenticated_access(**options)
+      skip_before_action :require_authentication, **options
+    end
   end
 
   private
 
-  def check_session_timeout
-    return unless logged_in?
-
-    last_activity = session[:last_activity_at]
-    if last_activity && Time.zone.parse(last_activity) < TIMEOUT_DURATION.ago
-      session.delete(:user_id)
-      session.delete(:last_activity_at)
-      redirect_to root_path, alert: "Your session has expired. Please sign in again."
-    else
-      session[:last_activity_at] = Time.current.to_s
-    end
+  def authenticated?
+    Current.user.present?
   end
 
   def current_user
-    @current_user ||= User.find_by(id: session[:user_id]) if session[:user_id]
+    Current.user
   end
 
-  def logged_in?
-    current_user.present?
+  def require_authentication
+    resume_session || request_authentication
   end
 
-  def authenticate_user!
-    unless logged_in?
-      session[:return_to] = request.fullpath
-      redirect_to root_path, alert: "Please sign in to continue"
+  def resume_session
+    if (session = Session.find_by(id: cookies.signed[:session_id]))
+      Current.session = session
+      Current.user = session.user
     end
   end
-end
-```
 
-## Remember Me
-
-For extended sessions, store a remember token:
-
-```ruby
-# app/models/user.rb
-class User < ApplicationRecord
-  has_secure_token :remember_token
-
-  def remember_me
-    regenerate_remember_token
-  end
-
-  def forget_me
-    update(remember_token: nil)
-  end
-end
-
-# Migration
-class AddRememberTokenToUsers < ActiveRecord::Migration[8.1]
-  def change
-    add_column :users, :remember_token, :string
-    add_index :users, :remember_token, unique: true
+  def request_authentication
+    redirect_to new_session_path
   end
 end
 ```
 
-In SessionsController:
+Key patterns:
+- **Opt-out model**: All controllers require auth by default. Use `allow_unauthenticated_access` to opt out.
+- **`resume_session`** sets both `Current.session` and `Current.user` from the database
+- **`current_user`** reads from `Current.user` -- no database query after `resume_session`
+- **No `authenticate_user!`** -- this is not Devise. The method is `require_authentication`.
+
+## Current Attributes
 
 ```ruby
-def create
-  user = User.from_omniauth(request.env['omniauth.auth'])
+# app/models/current.rb
+class Current < ActiveSupport::CurrentAttributes
+  attribute :session, :user, :account
+  attribute :request_id, :user_agent, :ip_address
 
-  if user.persisted?
-    session[:user_id] = user.id
-
-    if params[:remember_me] == '1'
-      user.remember_me
-      cookies.permanent.encrypted[:remember_token] = user.remember_token
-    end
-
-    redirect_to root_path
-  end
-end
-
-def destroy
-  current_user&.forget_me
-  cookies.delete(:remember_token)
-  session.delete(:user_id)
-  redirect_to root_path
-end
-```
-
-Update authentication to check remember token:
-
-```ruby
-def current_user
-  @current_user ||= find_current_user
-end
-
-def find_current_user
-  if session[:user_id]
-    User.find_by(id: session[:user_id])
-  elsif cookies.encrypted[:remember_token]
-    User.find_by(remember_token: cookies.encrypted[:remember_token])
+  def user=(user)
+    super
+    self.account = user&.account
   end
 end
 ```
 
-## Multi-Organization Switching
+When `Current.user` is set, `Current.account` is automatically set too. This enables:
+- Multi-tenancy scoping via `Current.account`
+- Model defaults: `belongs_to :creator, default: -> { Current.user }`
+- Model defaults: `belongs_to :account, default: -> { Current.account }`
 
-Users may belong to multiple organizations. Allow switching:
-
-```ruby
-# app/models/user.rb
-class User < ApplicationRecord
-  has_many :organization_memberships
-  has_many :organizations, through: :organization_memberships
-  belongs_to :current_organization, class_name: 'Organization', optional: true
-
-  def switch_organization(organization)
-    return false unless organizations.include?(organization)
-    update(current_organization: organization)
-  end
-end
-
-# app/models/organization_membership.rb
-class OrganizationMembership < ApplicationRecord
-  belongs_to :user
-  belongs_to :organization
-
-  enum :role, { member: 0, admin: 1 }
-end
-```
-
-Controller for switching:
+## ApplicationController Setup
 
 ```ruby
-# app/controllers/organization_switches_controller.rb
-class OrganizationSwitchesController < ApplicationController
-  before_action :authenticate_user!
-
-  def create
-    organization = current_user.organizations.find(params[:organization_id])
-
-    if current_user.switch_organization(organization)
-      redirect_to root_path, notice: "Switched to #{organization.name}"
-    else
-      redirect_to root_path, alert: "Could not switch organizations"
-    end
-  rescue ActiveRecord::RecordNotFound
-    redirect_to root_path, alert: "Organization not found"
-  end
-end
-```
-
-Update SetCurrent:
-
-```ruby
-def set_current_attributes
-  Current.user = current_user
-  Current.organization = current_user&.current_organization || current_user&.organization
-end
-```
-
-## Impersonation
-
-Admins can act as other users for support:
-
-```ruby
-# app/models/user.rb
-class User < ApplicationRecord
-  def admin?
-    # Define admin check based on your requirements
-    role == 'admin'
-  end
-end
-
-# app/controllers/concerns/impersonation.rb
-module Impersonation
-  extend ActiveSupport::Concern
-
-  included do
-    helper_method :impersonating?
-  end
-
-  def impersonate(user)
-    return unless current_user.admin?
-
-    session[:impersonated_user_id] = user.id
-    session[:impersonator_id] = current_user.id
-  end
-
-  def stop_impersonating
-    session.delete(:impersonated_user_id)
-    session.delete(:impersonator_id)
-  end
-
-  def impersonating?
-    session[:impersonated_user_id].present?
-  end
-
-  def current_user
-    @current_user ||= begin
-      if impersonating?
-        User.find_by(id: session[:impersonated_user_id])
-      else
-        User.find_by(id: session[:user_id])
-      end
-    end
-  end
-end
-
-# app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
   include Authentication
-  include Impersonation
-  include SetCurrent
 end
 ```
 
-Impersonation controller:
+That's it. The Authentication concern handles everything. No separate `SetCurrent` concern needed -- `resume_session` sets Current attributes directly.
+
+## Opting Out of Authentication
+
+Use `allow_unauthenticated_access` in controllers that should be publicly accessible:
 
 ```ruby
-# app/controllers/admin/impersonations_controller.rb
-class Admin::ImpersonationsController < ApplicationController
-  before_action :authenticate_user!
-  before_action :require_admin!
+class HomeController < ApplicationController
+  allow_unauthenticated_access only: [:index, :show]
+end
 
-  def create
-    user = User.find(params[:user_id])
-    impersonate(user)
-    redirect_to root_path, notice: "Now impersonating #{user.name}"
-  end
+class SessionsController < ApplicationController
+  allow_unauthenticated_access only: [:new, :create, :failure]
+end
+```
 
-  def destroy
-    stop_impersonating
-    redirect_to admin_users_path, notice: "Stopped impersonating"
-  end
+## Multi-Tenancy
 
-  private
+Users belong to organizations. The IdP provides organization data in the auth response. `Current.account` is set automatically when `Current.user` is assigned.
 
-  def require_admin!
-    redirect_to root_path, alert: "Access denied" unless current_user.admin?
+Models use defaults for automatic association:
+
+```ruby
+class Card < ApplicationRecord
+  belongs_to :creator, class_name: "User", default: -> { Current.user }
+  belongs_to :account, default: -> { Current.account }
+end
+```
+
+This eliminates manual assignment in controllers -- records automatically get the current user and account.
+
+## Session Cleanup
+
+Periodically clean up old sessions:
+
+```ruby
+# app/jobs/session_cleanup_job.rb
+class SessionCleanupJob < ApplicationJob
+  queue_as :default
+
+  def perform
+    Session.where("updated_at < ?", 30.days.ago).delete_all
   end
 end
 ```
 
-Show impersonation banner:
+Schedule via Solid Queue recurring jobs:
 
-```erb
-<!-- app/views/layouts/_impersonation_banner.html.erb -->
-<% if impersonating? %>
-  <div class="alert alert-warning">
-    Impersonating <%= current_user.name %>
-    <%= button_to "Stop Impersonating",
-                  admin_impersonation_path,
-                  method: :delete %>
-  </div>
-<% end %>
+```yaml
+# config/recurring.yml
+cleanup_expired_sessions:
+  class: SessionCleanupJob
+  schedule: every day at 04:00
 ```
 
-## Session Security Best Practices
+## Listing Active Sessions
 
-### 1. Secure Session Configuration
-
-```ruby
-# config/initializers/session_store.rb
-Rails.application.config.session_store :cookie_store,
-  key: '_afal_app_session',
-  secure: Rails.env.production?,
-  httponly: true,
-  same_site: :lax,
-  expire_after: 2.hours
-```
-
-### 2. Session Cleanup on Logout
-
-Always clear all session data:
+Allow users to see and revoke their sessions:
 
 ```ruby
+# app/controllers/sessions_controller.rb
+def index
+  @sessions = Current.user.sessions.order(created_at: :desc)
+end
+
 def destroy
-  current_user&.forget_me if current_user.respond_to?(:forget_me)
-  cookies.delete(:remember_token)
-  reset_session # Clears entire session, prevents fixation
-  redirect_to root_path, notice: "Signed out successfully"
+  session = Current.user.sessions.find(params[:id])
+  session.destroy
+  redirect_to sessions_path, notice: "Session revoked"
 end
 ```
 
-### 3. Session Fixation Protection
+## Security Best Practices
 
-Rails provides automatic protection. After authentication:
-
-```ruby
-def create
-  user = User.from_omniauth(request.env['omniauth.auth'])
-
-  if user.persisted?
-    reset_session # Clear any existing session
-    session[:user_id] = user.id
-    redirect_to root_path
-  end
-end
-```
-
-### 4. HTTPS Enforcement
+### HTTPS Enforcement
 
 ```ruby
 # config/environments/production.rb
 config.force_ssl = true
 ```
 
-### 5. Secret Key Management
+### Cookie Security
+
+Always set `httponly: true` and `secure: true` in production:
+
+```ruby
+cookies.signed[:session_id] = {
+  value: session.id,
+  httponly: true,        # Prevent JavaScript access
+  secure: Rails.env.production?  # HTTPS only in production
+}
+```
+
+### Secret Key Management
 
 Never commit `config/master.key`. Use encrypted credentials:
 
@@ -385,68 +239,25 @@ rails credentials:edit
 
 ```yaml
 # config/credentials.yml.enc
-afal_idp:
-  client_id: xxx
-  client_secret: yyy
+idp:
+  url: https://id.afal.mx
+  client_id: your_client_id
+  client_secret: your_client_secret
 ```
 
 Access in code:
 
 ```ruby
-Rails.application.credentials.afal_idp[:client_id]
+Rails.application.credentials.dig(:idp, :client_id)
 ```
 
-## Database Session Store (Alternative)
+## Common Mistakes
 
-For apps with strict session requirements, use database storage:
-
-```ruby
-# Gemfile
-gem 'activerecord-session_store'
-```
-
-```bash
-rails generate active_record:session_migration
-rails db:migrate
-```
-
-```ruby
-# config/initializers/session_store.rb
-Rails.application.config.session_store :active_record_store,
-  key: '_afal_app_session',
-  expire_after: 2.hours
-```
-
-Benefits:
-- Server-side storage (more secure)
-- Larger session data capacity
-- Explicit session expiration via database cleanup
-
-Tradeoffs:
-- Database load on every request
-- Requires session cleanup job
-
-## Session Cleanup Job
-
-If using database sessions:
-
-```ruby
-# app/jobs/session_cleanup_job.rb
-class SessionCleanupJob < ApplicationJob
-  queue_as :default
-
-  def perform
-    ActiveRecord::SessionStore::Session
-      .where('updated_at < ?', 2.hours.ago)
-      .delete_all
-  end
-end
-
-# config/initializers/session_cleanup.rb
-# Run every hour
-Rails.application.config.after_initialize do
-  if Rails.env.production?
-    SessionCleanupJob.set(wait: 1.hour).perform_later
-  end
-end
-```
+| Mistake | Why It Fails | Solution |
+|---------|-------------|----------|
+| `session[:user_id]` | No audit trail, no revocation | Use Session model + `cookies.signed[:session_id]` |
+| `authenticate_user!` | Devise pattern, not AFAL | Use `require_authentication` (automatic via concern) |
+| `skip_before_action :authenticate_user!` | Wrong method name | Use `allow_unauthenticated_access` |
+| Separate `SetCurrent` concern | Unnecessary complexity | `resume_session` in Authentication sets Current directly |
+| `@current_user ||= User.find(...)` | Queries DB repeatedly | Use `Current.user` (set once in `resume_session`) |
+| Cookie store for sessions | No server-side revocation | Use database-backed Session model |

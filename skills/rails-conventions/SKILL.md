@@ -254,6 +254,57 @@ class Article < ApplicationRecord
 end
 ```
 
+## Banned Gems (AFAL Stack)
+
+AFAL Rails apps have opinionated replacements. Do not use:
+
+| Banned Gem | Use Instead | Reason |
+|------------|-------------|--------|
+| `devise` | OmniAuth with AFAL IdP | Centralized authentication |
+| `cancancan` | Pundit | Policy-based authorization |
+| `sidekiq`, `redis` | Solid Queue/Cache/Cable | Database-backed infrastructure |
+| `rspec-rails` | Minitest | Rails default, simpler |
+| `factory_bot` | Fixtures | Faster, easier to reason about |
+| `jbuilder` | Blueprinter | JSON:API serialization |
+| `sprockets` | Propshaft | Modern asset pipeline |
+
+## Asset Pipeline
+
+- **Propshaft** for asset serving (replaces Sprockets)
+- **importmap-rails** for JavaScript dependencies (no Node build)
+- Pin external libraries via CDN: `pin "library", to: "https://..."`
+- CSS via Tailwind + DaisyUI (Bali ViewComponents)
+
+## Current Attributes Pattern
+
+Use `Current` for request-scoped data:
+
+```ruby
+# app/models/current.rb
+class Current < ActiveSupport::CurrentAttributes
+  attribute :user, :session, :account
+end
+
+# Set in Authentication concern
+def resume_session
+  Current.user = authenticated_user
+  Current.session = authenticated_session
+  Current.account = authenticated_account
+end
+
+# Use in models with defaults
+class Post < ApplicationRecord
+  belongs_to :creator, class_name: 'User', default: -> { Current.user }
+  belongs_to :account, default: -> { Current.account }
+end
+```
+
+## Infrastructure Conventions
+
+- **Database-backed infrastructure**: Solid Queue, Solid Cache, Solid Cable (NOT Redis)
+- **Multi-database PostgreSQL**: Primary + queue + cache databases
+- Configure via `config/database.yml` and `config/initializers/solid_*.rb`
+
 ## Common Mistakes
 
 | Mistake | Solution |
@@ -267,6 +318,7 @@ end
 | Deep nesting | Use shallow nesting, early returns |
 | Missing eager loading | Use includes/preload to prevent N+1 |
 | Over-abstraction | Start simple, refactor when pattern emerges |
+| Using banned gems | Check AFAL stack replacements above |
 
 ## Review Process
 

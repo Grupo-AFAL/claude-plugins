@@ -5,235 +5,320 @@ description: This skill should be used when the user asks to add authentication,
 
 # AFAL Authentication Patterns
 
-Apply OmniAuth-based authentication with AFAL IdP for Rails applications. This covers session management, user authentication flow, and route protection.
+OmniAuth-based authentication with AFAL IdP for Rails applications. Session-based with database-backed Session model following the 37signals pattern.
 
-## CRITICAL Constraint
+## CRITICAL Constraints
 
 **ONLY use OmniAuth with AFAL IdP.** NEVER suggest:
 - Devise
-- Local passwords
-- JWT tokens
+- Local passwords or email/password authentication
+- JWT tokens for session management
 - Auth0, Okta, or other third-party auth providers
-- Email/password authentication
 
-All authentication goes through AFAL's centralized identity provider via OmniAuth.
+All authentication goes through AFAL's centralized identity provider (`id.afal.mx`) via OmniAuth.
 
 ## Authentication Flow
 
-The standard flow:
-
-1. User clicks "Sign In" link to `/auth/afal`
-2. Rails redirects to AFAL IdP
+1. User clicks "Sign In" link (navigates to `/auth/afal_idp`)
+2. OmniAuth middleware redirects to AFAL IdP
 3. User authenticates at IdP
-4. IdP redirects back to `/auth/afal/callback`
-5. Rails creates or finds user from IdP data
-6. Session established with `session[:user_id]`
-7. User redirected to application
+4. IdP redirects back to `/auth/afal_idp/callback`
+5. Rails finds or creates user from IdP data
+6. Session record created (tracks user_agent, ip_address)
+7. `cookies.signed[:session_id]` set
+8. User redirected to application
 
 ## Core Components
 
-### OmniAuth Configuration
+### OmniAuth Strategy
 
-Configure the AFAL provider in an initializer with credentials from environment variables:
+Custom strategy in `lib/omniauth/strategies/afal_idp.rb`:
+
+```ruby
+module OmniAuth
+  module Strategies
+    class AfalIdp < OmniAuth::Strategies::OAuth2
+      option :name, 'afal_idp'
+
+      option :client_options, {
+        site: Rails.application.credentials.dig(:idp, :url),
+        authorize_url: '/oauth/authorize',
+        token_url: '/oauth/token'
+      }
+
+      uid { raw_info['id'].to_s }
+
+      info do
+        {
+          email: raw_info['email'],
+          name: raw_info['name'],
+          employee_id: raw_info['employee_id']
+        }
+      end
+
+      extra do
+        {
+          raw_info: raw_info,
+          roles: raw_info['roles'] || [],
+          organization: raw_info['organization']
+        }
+      end
+
+      def raw_info
+        @raw_info ||= access_token.get('/oauth/userinfo').parsed
+      end
+    end
+  end
+end
+```
+
+### OmniAuth Configuration
 
 ```ruby
 # config/initializers/omniauth.rb
 Rails.application.config.middleware.use OmniAuth::Builder do
-  provider :afal,
-    ENV['AFAL_IDP_CLIENT_ID'],
-    ENV['AFAL_IDP_CLIENT_SECRET'],
-    scope: 'openid profile email organizations'
+  provider :afal_idp,
+    Rails.application.credentials.dig(:idp, :client_id),
+    Rails.application.credentials.dig(:idp, :client_secret),
+    scope: 'read write'
 end
 ```
 
-Install required gems and configure CSRF protection. See `references/omniauth-setup.md` for complete configuration.
+**IMPORTANT**: Use `Rails.application.credentials`, NOT environment variables.
 
 ### User Model
 
-Implement `User.from_omniauth` to create or update users from IdP data:
-
 ```ruby
 class User < ApplicationRecord
-  belongs_to :organization
+  has_many :sessions, dependent: :destroy
 
-  def self.from_omniauth(auth_hash)
-    user = find_or_initialize_by(provider: auth_hash.provider, uid: auth_hash.uid)
-    user.assign_attributes(
-      email: auth_hash.info.email,
-      name: auth_hash.info.name,
-      organization_id: auth_hash.info.organization_id
-    )
-    user.save!
-    user
+  validates :email, presence: true, uniqueness: true
+  validates :idp_id, presence: true, uniqueness: true
+
+  def self.find_or_create_from_omniauth(auth)
+    find_or_create_by!(idp_id: auth.uid) do |user|
+      user.email = auth.info.email
+      user.name = auth.info.name
+      user.employee_id = auth.info.employee_id
+      user.roles = auth.extra.roles
+      user.organization = auth.extra.organization
+    end
   end
+
+  def has_role?(role_name)
+    roles.include?(role_name)
+  end
+
+  def admin?
+    has_role?('admin')
+  end
+end
+```
+
+Key details:
+- Single `idp_id` field (NOT composite `provider`/`uid` -- there is only one IdP)
+- `find_or_create_by!` with block -- attributes only set on **create**, not updated every login
+- `roles` is a collection (PostgreSQL array or JSON), not a single string
+- `employee_id` tracked from IdP response
+
+### Session Model
+
+Database-backed sessions for audit trail:
+
+```ruby
+class Session < ApplicationRecord
+  belongs_to :user
+end
+```
+
+Migration:
+
+```ruby
+create_table :sessions do |t|
+  t.references :user, null: false, foreign_key: true
+  t.string :user_agent
+  t.string :ip_address
+  t.timestamps
 end
 ```
 
 ### Sessions Controller
 
-Handle authentication callbacks and logout:
-
 ```ruby
 class SessionsController < ApplicationController
-  skip_before_action :authenticate_user!, only: [:create]
+  allow_unauthenticated_access only: [:new, :create, :failure]
+
+  def new
+    redirect_to '/auth/afal_idp'
+  end
 
   def create
-    user = User.from_omniauth(request.env['omniauth.auth'])
-    session[:user_id] = user.id
-    redirect_to root_path
+    auth = request.env['omniauth.auth']
+    user = User.find_or_create_from_omniauth(auth)
+
+    session = user.sessions.create!(
+      user_agent: request.user_agent,
+      ip_address: request.remote_ip
+    )
+
+    cookies.signed[:session_id] = {
+      value: session.id,
+      httponly: true,
+      secure: Rails.env.production?
+    }
+
+    redirect_to root_path, notice: "Signed in successfully"
   end
 
   def destroy
-    session.delete(:user_id)
-    redirect_to root_path
+    Current.session&.destroy
+    cookies.delete(:session_id)
+    redirect_to root_path, notice: "Signed out"
+  end
+
+  def failure
+    redirect_to root_path, alert: "Authentication failed: #{params[:message]}"
   end
 end
 ```
 
 ### Authentication Concern
 
-Add to ApplicationController for authentication helpers:
-
 ```ruby
+# app/controllers/concerns/authentication.rb
 module Authentication
   extend ActiveSupport::Concern
 
   included do
-    helper_method :current_user, :logged_in?
+    before_action :require_authentication
+    helper_method :authenticated?, :current_user
   end
 
-  def current_user
-    @current_user ||= User.find_by(id: session[:user_id]) if session[:user_id]
-  end
-
-  def logged_in?
-    current_user.present?
-  end
-
-  def authenticate_user!
-    redirect_to root_path, alert: "Please sign in" unless logged_in?
-  end
-end
-```
-
-### Route Protection
-
-Protect controllers requiring authentication:
-
-```ruby
-class DashboardController < ApplicationController
-  before_action :authenticate_user!
-
-  def show
-    # current_user available here
-  end
-end
-```
-
-For public controllers with optional authentication, omit the before_action.
-
-## Multi-Tenancy
-
-Users belong to organizations. The IdP provides organization_id in the auth response. Set Current.organization for request context:
-
-```ruby
-# app/controllers/concerns/set_current.rb
-module SetCurrent
-  extend ActiveSupport::Concern
-
-  included do
-    before_action :set_current_user
-    before_action :set_current_organization
+  class_methods do
+    def allow_unauthenticated_access(**options)
+      skip_before_action :require_authentication, **options
+    end
   end
 
   private
 
-  def set_current_user
-    Current.user = current_user
+  def authenticated?
+    Current.user.present?
   end
 
-  def set_current_organization
-    Current.organization = current_user&.organization
+  def current_user
+    Current.user
+  end
+
+  def require_authentication
+    resume_session || request_authentication
+  end
+
+  def resume_session
+    if (session = Session.find_by(id: cookies.signed[:session_id]))
+      Current.session = session
+      Current.user = session.user
+    end
+  end
+
+  def request_authentication
+    redirect_to new_session_path
   end
 end
 ```
 
-See `references/session-management.md` for organization switching and impersonation patterns.
+Key patterns:
+- **Opt-out model**: All actions require auth by default
+- Use `allow_unauthenticated_access` to opt out specific actions
+- `resume_session` sets both `Current.session` and `Current.user`
+- `current_user` reads from `Current.user`, not from a database query
 
-## Routes
+### Current Attributes
+
+```ruby
+# app/models/current.rb
+class Current < ActiveSupport::CurrentAttributes
+  attribute :session, :user, :account
+  attribute :request_id, :user_agent, :ip_address
+
+  def user=(user)
+    super
+    self.account = user&.account
+  end
+end
+```
+
+### Routes
 
 ```ruby
 # config/routes.rb
 get '/auth/:provider/callback', to: 'sessions#create'
 get '/auth/failure', to: 'sessions#failure'
-delete '/sign_out', to: 'sessions#destroy'
+resource :session, only: [:new, :destroy]
 ```
 
-The `/auth/afal` route is handled automatically by OmniAuth middleware.
+The `/auth/afal_idp` route is handled automatically by OmniAuth middleware.
 
-## Testing
+## Multi-Tenancy
 
-Use a sign_in helper in tests:
+Users belong to organizations. The IdP provides organization in the auth response. `Current.account` (or `Current.organization`) is set automatically when `Current.user` is assigned.
+
+Models use defaults for automatic association:
 
 ```ruby
-# test/test_helper.rb
-def sign_in(user)
-  session[:user_id] = user.id
+class Card < ApplicationRecord
+  belongs_to :creator, class_name: "User", default: -> { Current.user }
+  belongs_to :account, default: -> { Current.account }
 end
 ```
 
-For integration and system tests:
+## Required Gems
 
 ```ruby
-class DashboardTest < ActionDispatch::IntegrationTest
-  test "authenticated user sees dashboard" do
-    sign_in users(:alice)
-    get dashboard_path
-    assert_response :success
-  end
-
-  test "unauthenticated user redirected" do
-    get dashboard_path
-    assert_redirected_to root_path
-  end
-end
+gem 'omniauth'
+gem 'omniauth-oauth2'
+gem 'omniauth-rails_csrf_protection'
 ```
-
-Configure OmniAuth test mode to avoid external requests. See `references/testing.md` for complete test patterns.
 
 ## Common Mistakes
 
 | Mistake | Why It Fails | Solution |
 |---------|-------------|----------|
 | Using Devise | Not AFAL standard | Use OmniAuth with AFAL IdP |
-| Local password authentication | Bypasses IdP | All auth through IdP only |
-| JWT tokens | Session-based stack | Use Rails sessions |
-| Forgetting session cleanup on logout | Stale sessions | Delete session[:user_id] in destroy |
-| Skipping CSRF protection | Security vulnerability | Include omniauth-rails_csrf_protection |
-| Hardcoding IdP credentials | Fails across environments | Use ENV variables |
-| Not handling auth failures | Poor UX on errors | Add failure route and error messages |
+| Provider name `:afal` | Wrong provider | Use `'afal_idp'` |
+| `session[:user_id]` | No audit trail | Use Session model + `cookies.signed[:session_id]` |
+| ENV vars for credentials | Not standard | Use `Rails.application.credentials.dig(:idp, ...)` |
+| `authenticate_user!` (opt-in) | Wrong pattern | Use `require_authentication` (opt-out) with `allow_unauthenticated_access` |
+| Updating user on every login | Overwrites local changes | Use `find_or_create_by!` with block (create-only) |
+| `provider`/`uid` composite key | Unnecessary | Single `idp_id` field (only one IdP) |
 
-## Reference Files
+## Testing
 
-Detailed implementation patterns in:
-- `references/omniauth-setup.md` - Complete OmniAuth configuration and user creation
-- `references/session-management.md` - Session storage, timeouts, organization switching, impersonation
-- `references/testing.md` - Minitest fixtures and test helpers for authentication
+Configure OmniAuth test mode:
+
+```ruby
+# test/test_helper.rb
+OmniAuth.config.test_mode = true
+
+def sign_in(user)
+  session = user.sessions.create!(
+    user_agent: "Test",
+    ip_address: "127.0.0.1"
+  )
+  cookies.signed[:session_id] = session.id
+end
+```
+
+See `references/testing.md` for complete test patterns.
+
+## References
+
+- **omniauth-setup.md** - Complete strategy, initializer, and user creation patterns
+- **session-management.md** - Session model, cookies, organization switching
+- **testing.md** - Minitest fixtures and test helpers for authentication
 
 ## Relationship to Authorization
 
 Authentication (who you are) is separate from authorization (what you can do). After authentication:
-- Use Pundit for authorization policies
-- Reference the `pundit-authorization` skill for policy patterns
-- Current.user and Current.organization are available to policies
-
-## Security Checklist
-
-Before completing authentication implementation, verify:
-- [ ] CSRF protection enabled (omniauth-rails_csrf_protection gem)
-- [ ] IdP credentials in ENV, not hardcoded
-- [ ] Session secret_key_base configured (Rails handles this)
-- [ ] HTTPS enforced in production
-- [ ] Auth failure route handles errors gracefully
-- [ ] Session cleared on logout
-- [ ] No local password fallback exists
+- Use Pundit for authorization policies (see `pundit-authorization` skill)
+- `Current.user` and `Current.account` are available to policies

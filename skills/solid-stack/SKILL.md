@@ -24,7 +24,7 @@ All three use PostgreSQL, eliminating external dependencies and providing transa
 | Async processing (emails, reports, imports) | Solid Queue | `GenerateReportJob.perform_later(report_id)` |
 | Reduce database queries | Solid Cache | `Rails.cache.fetch("stats") { expensive_query }` |
 | Real-time UI updates | Solid Cable + Turbo Streams | `turbo_stream_from current_organization, "notifications"` |
-| Scheduled tasks (daily, hourly) | Solid Queue recurring | Configure in `config/queue.yml` |
+| Scheduled tasks (daily, hourly) | Solid Queue recurring | Configure in `config/recurring.yml` |
 
 ## Database-Backed Advantages
 
@@ -64,6 +64,26 @@ All three use PostgreSQL, eliminating external dependencies and providing transa
 4. Enqueue: `ProcessReportJob.perform_later(report_id)`
 5. Test with `perform_enqueued_jobs` (Minitest)
 
+### The `_later` / `_now` Pattern (37signals Convention)
+
+Jobs should be thin wrappers. Models provide `_later` (enqueue) and `_now` (execute) methods:
+
+```ruby
+module Notifiable
+  def notify_later
+    NotifyRecipientsJob.perform_later(self)
+  end
+
+  def notify_now
+    recipients.each do |recipient|
+      NotificationMailer.notify(recipient, self).deliver_later
+    end
+  end
+end
+```
+
+Call from controllers: `@post.notify_later` -- never call `perform_later` directly from controllers.
+
 ### Adding Caching
 
 1. Ensure Solid Cache installed: `bin/rails solid_cache:install`
@@ -83,7 +103,27 @@ All three use PostgreSQL, eliminating external dependencies and providing transa
 
 ## Configuration Files
 
-**config/queue.yml** (Solid Queue):
+**config/database.yml** (Multi-database for Solid Stack):
+```yaml
+production:
+  primary:
+    <<: *default
+    database: app_production
+  queue:
+    <<: *default
+    database: app_production_queue
+    migrations_paths: db/queue_migrate
+  cache:
+    <<: *default
+    database: app_production_cache
+    migrations_paths: db/cache_migrate
+  cable:
+    <<: *default
+    database: app_production_cable
+    migrations_paths: db/cable_migrate
+```
+
+**config/queue.yml** (Solid Queue workers):
 ```yaml
 production:
   dispatchers:
@@ -94,6 +134,22 @@ production:
       threads: 3
       processes: 2
       polling_interval: 0.1
+```
+
+**config/recurring.yml** (Solid Queue recurring jobs):
+```yaml
+production:
+  deliver_bundled_notifications:
+    command: "Notification::Bundle.deliver_all_later"
+    schedule: every 30 minutes
+
+  cleanup_expired_sessions:
+    class: CleanupExpiredSessionsJob
+    schedule: every day at 04:00
+
+  clear_finished_jobs:
+    command: "SolidQueue::Job.clear_finished_in_batches"
+    schedule: every hour at minute 12
 ```
 
 **config/environments/production.rb** (Solid Cache):

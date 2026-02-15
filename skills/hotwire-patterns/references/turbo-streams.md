@@ -69,9 +69,12 @@ end
 
 ## Multiple Target Updates
 
-Update multiple parts of the page in single response:
+Update multiple parts of the page in single response.
+
+**ANTI-PATTERN:** Inline multi-stream arrays in controllers are hard to read and maintain. Avoid:
 
 ```ruby
+# BAD - inline stream arrays in controller
 def update
   @message = Message.find(params[:id])
 
@@ -88,6 +91,34 @@ def update
   end
 end
 ```
+
+**PREFERRED:** Use `.turbo_stream.erb` template files for clarity:
+
+```ruby
+# GOOD - delegate to template
+def update
+  @message = Message.find(params[:id])
+
+  if @message.update(message_params)
+    respond_to do |format|
+      format.turbo_stream
+      format.html { redirect_to @message }
+    end
+  else
+    render :edit, status: :unprocessable_entity
+  end
+end
+```
+
+```erb
+<!-- app/views/messages/update.turbo_stream.erb -->
+<%= turbo_stream.replace(@message) %>
+<%= turbo_stream.update("notification", partial: "shared/notification",
+                        locals: { text: "Saved" }) %>
+<%= turbo_stream.update("sidebar_stats", partial: "stats") %>
+```
+
+Template files keep controller logic clean and make multi-stream responses easier to maintain.
 
 ## Broadcasting with Turbo Streams
 
@@ -294,6 +325,47 @@ end
 ```
 
 Use morph for live updates that should preserve user input state.
+
+### Morph on Replace
+
+Turbo 8 supports morphing on `turbo_stream.replace` with the `method: :morph` keyword:
+
+```ruby
+# Morph preserves focus, scroll position, form state
+render turbo_stream: turbo_stream.replace(
+  dom_id(@card, :container),
+  partial: "cards/container",
+  method: :morph,
+  locals: { card: @card.reload }
+)
+```
+
+This is preferred over the standalone `morph` action when you need fine-grained control over which element to replace while preserving state.
+
+### Page-Level Morph Refresh
+
+Enable page-level morphing with meta tags in your layout:
+
+```erb
+<%# In layout head - enables page-level morphing %>
+<meta name="turbo-refresh-method" content="morph">
+<meta name="turbo-refresh-scroll" content="preserve">
+```
+
+Broadcast real-time page refresh to connected clients:
+
+```ruby
+# Triggers page refresh for all subscribers
+Turbo::StreamsChannel.broadcast_refresh_to("dashboard")
+```
+
+Views subscribe:
+
+```erb
+<%= turbo_stream_from "dashboard" %>
+```
+
+When refresh is broadcast, subscribed clients reload the page using morph, preserving scroll position and form state.
 
 ## Refresh Action (Rails 8+)
 
