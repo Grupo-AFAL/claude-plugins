@@ -35,20 +35,34 @@ Phase 3:   Quality gates (tests, rubocop, brakeman)
 Phase 4:   Commit, create PR, update SmartSuite status
 ```
 
+## Prerequisites
+
+The project's CLAUDE.md must declare its SmartSuite project ID:
+
+```markdown
+## SmartSuite
+
+- Necesidad de Software ID: `6972b393cbbe389c07f41770`
+```
+
+This scopes all story queries to the current project. Without it, the autopilot will stop and ask for configuration. See **`references/smartsuite.md`** for the full list of project IDs.
+
 ## Phase 0: Story Setup
 
-If a story ID is provided (e.g., `GC-FND-002-US01`):
+If a story code is provided (e.g., `GC-FND-002-US01`):
 
-1. Fetch story from SmartSuite -- see **`references/smartsuite.md`** for MCP calls
-2. Validate status is `backlog` -- stop if not
-3. Update status to `in_progress`
-4. Create git worktree for isolation:
+1. Read the Necesidad de Software ID from the project's CLAUDE.md
+2. Fetch story from SmartSuite by its `code` field -- see **`references/smartsuite.md`** for MCP calls
+3. Verify the story belongs to this project (matching `necesidad_software`) -- warn if mismatched
+4. Validate status is `backlog` -- stop if not
+5. Update status to `in_progress` and set `branch_name`
+6. Create git worktree for isolation:
    ```bash
    git worktree add ../worktrees/feature/GC-FND-002-US01
    ```
-5. Generate `.claude/TASK.md` with story details in the worktree
+7. Generate `.claude/TASK.md` with story details in the worktree
 
-If `next` is specified, query SmartSuite for the highest-priority `backlog` story and proceed.
+If `next` is specified, query SmartSuite for the highest-priority `backlog` story **scoped to this project's Necesidad de Software** and proceed.
 
 ## Phase 0.5: TDD Red Phase (MANDATORY)
 
@@ -122,7 +136,7 @@ If after 5 review passes the code still is not approved:
 
 1. Stop and document blockers
 2. Create a GitHub issue with what was attempted, unresolved feedback, and files needing human review
-3. Update SmartSuite status to `blocked` with reason
+3. Add a comment on the SmartSuite story with the escalation reason and GitHub issue link (there is no `blocked` status -- leave as `in_progress`)
 4. Do NOT commit unapproved code
 
 ## Integration with Existing Commands

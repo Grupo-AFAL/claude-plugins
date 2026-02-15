@@ -9,9 +9,13 @@ User: /omc-rails-autopilot: GC-FND-002-US01
 
 === Phase 0: Story Setup ===
 
+Agent: Reading Necesidad de Software ID from CLAUDE.md...
+       Project: Gobierno Corporativo (6972b393cbbe389c07f41770)
+
 Agent: Fetching story GC-FND-002-US01 from SmartSuite...
        Title: Add department hierarchy management
        Module: Foundation (GC-FND)
+       Necesidad de Software: Gobierno Corporativo (matches project)
        Status: backlog -> in_progress
 
 Agent: Creating worktree at ../worktrees/feature/GC-FND-002-US01
@@ -99,7 +103,11 @@ Agent: Done. Story GC-FND-002-US01 complete.
 ```
 User: /omc-rails-autopilot: next
 
-Agent: Querying SmartSuite for next backlog story...
+Agent: Reading Necesidad de Software ID from CLAUDE.md...
+       Project: Gobierno Corporativo (6972b393cbbe389c07f41770)
+
+Agent: Querying SmartSuite for next backlog story in this project...
+       Filter: status=backlog AND necesidad_software=6972b393cbbe389c07f41770
        Found: GC-HRM-001-US03 - Employee onboarding checklist
        Status: backlog -> in_progress
 
@@ -121,9 +129,10 @@ Agent: 5 review passes exhausted without approval.
        - Unresolved feedback: association pattern needs rethink
        - Files needing human review: app/models/concerns/evidenceable.rb
 
-       Updating SmartSuite...
-       Status: in_progress -> blocked
-       Blocked reason: DHH review escalation after 5 passes
+       Adding comment to SmartSuite story...
+       "Autopilot escalation: DHH review failed after 5 passes.
+        See GitHub issue: https://github.com/Grupo-AFAL/gobierno-corporativo/issues/45"
+       Status remains: in_progress
 
-Agent: Story blocked. Human review needed.
+Agent: Story escalated. Human review needed.
 ```
