@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: This skill should be used when the user asks to "generate an architecture spec", "design a feature", "create a spec for", "architecture for", "plan an implementation", or invokes /architecture with a path to a requirements document. Produces iteratively-refined specs using the rails-architect and dhh-code-reviewer agents.
+description: This skill should be used when the user asks to "generate an architecture spec", "design a feature", "create a spec for", "architecture for", "plan an implementation", "plan a feature", "spec out a feature", "write a technical spec", "draft an architecture document", "design the database schema for", or invokes /architecture with a path to a requirements document. Produces iteratively-refined specs using the rails-architect and dhh-code-reviewer agents.
 ---
 
 # Generate Architecture Specification

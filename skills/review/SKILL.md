@@ -1,6 +1,6 @@
 ---
 name: review
-description: This skill should be used when the user asks to "review code", "review this file", "check code quality", "DHH review", "review my changes", "review staged changes", "review branch", or invokes /review with a file path, directory, glob pattern, --staged, or --branch. Runs automated checks and invokes the dhh-code-reviewer agent for Rails-worthiness evaluation.
+description: This skill should be used when the user asks to "review code", "review this file", "check code quality", "DHH review", "review my changes", "review staged changes", "review branch", "is this code Rails-worthy", "check for anti-patterns", "review my PR", "code review this", "check conventions", or invokes /review with a file path, directory, glob pattern, --staged, or --branch. Runs automated checks and invokes the dhh-code-reviewer agent for Rails-worthiness evaluation.
 ---
 
 # Review Code for Quality Issues
