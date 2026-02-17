@@ -75,7 +75,7 @@ If `next` is specified, query SmartSuite for the highest-priority `backlog` stor
 5. Create fixtures for test data
 6. Run tests -- confirm ALL new tests fail (RED state)
 
-Invoke `/oh-my-claudecode:tdd` or the `tdd-guide` agent for test writing. See **`references/tdd-patterns.md`** for conventions and examples.
+Invoke `/oh-my-claudecode:tdd` for test writing guidance. See **`references/tdd-patterns.md`** for AFAL-specific conventions and examples.
 
 **Exit criteria:** All tests written and failing.
 
@@ -143,10 +143,10 @@ If after 5 review passes the code still is not approved:
 
 | Command | When to Use |
 |---------|-------------|
-| `/architecture` | Spec/planning phase with review iterations |
-| `/implement` | Manual implementation from spec |
-| `/review` | Ad-hoc code review |
-| `/omc-rails-autopilot` | Full autonomous flow with SmartSuite |
+| `/architecture` | Generate and refine spec with iterative DHH reviews |
+| `/implement` | Structured implementation from approved spec |
+| `/review` | Ad-hoc code review against DHH standards |
+| `/omc-rails-autopilot` | Full autonomous flow with SmartSuite tracking |
 
 Typical flow: `/architecture` to generate and refine a spec, then `/omc-rails-autopilot: STORY_ID` for autonomous implementation.
 

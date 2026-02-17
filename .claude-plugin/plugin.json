@@ -1,7 +1,7 @@
 {
   "name": "afal-rails-tools",
-  "description": "Shared Claude Code skills for AFAL Rails applications: Hotwire, Pundit authorization, authentication, Solid Stack, Bali ViewComponents, React islands, JSON:API, concerns, migrations, and conventions",
-  "version": "2.0.0",
+  "description": "Shared Claude Code skills and agents for AFAL Rails applications: autonomous development, DHH code reviews, architecture specs, Hotwire, Pundit, Bali ViewComponents, and Rails conventions",
+  "version": "2.1.0",
   "author": {
     "name": "Grupo AFAL",
     "url": "https://github.com/Grupo-AFAL"
