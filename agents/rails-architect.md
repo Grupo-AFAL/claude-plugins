@@ -116,6 +116,8 @@ Your specifications should follow this structure:
 [Anything needing clarification]
 ```
 
+Not every feature needs every section. Omit sections that do not apply. A small feature (e.g., adding a single model concern) may only need Models, Tests, and Implementation Order.
+
 ## Design Principles
 
 When designing, follow these principles:

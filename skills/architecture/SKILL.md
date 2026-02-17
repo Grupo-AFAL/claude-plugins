@@ -103,6 +103,9 @@ Examples:
 
 ## Integration
 
-This skill produces architecture specs that can then be implemented via:
-- `/implement <path-to-spec>` -- Structured implementation from approved spec
-- `/omc-rails-autopilot: implement from <path-to-spec>` -- Full autonomous implementation with SmartSuite tracking
+| Command | When to Use |
+|---------|-------------|
+| `/architecture` | Generate and refine spec with DHH reviews (this skill) |
+| `/implement` | Structured implementation from approved spec |
+| `/review` | Ad-hoc code review against DHH standards |
+| `/omc-rails-autopilot` | Full autonomous flow with SmartSuite tracking |

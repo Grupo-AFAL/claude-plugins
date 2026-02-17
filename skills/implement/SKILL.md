@@ -127,12 +127,9 @@ git commit -m "Add notification system"
 
 ## Integration
 
-This skill works with the full AFAL development workflow:
-
 | Command | When to Use |
 |---------|-------------|
 | `/architecture` | Generate and refine spec with DHH reviews |
-| `/implement` | Implement from approved spec (this skill) |
+| `/implement` | Structured implementation from approved spec (this skill) |
+| `/review` | Ad-hoc code review against DHH standards |
 | `/omc-rails-autopilot` | Full autonomous flow with SmartSuite tracking |
-
-Typical flow: `/architecture` to generate and refine a spec, then `/implement` for structured implementation, or `/omc-rails-autopilot` for full autonomous mode.

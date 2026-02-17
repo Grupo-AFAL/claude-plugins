@@ -268,6 +268,10 @@ class Cards::ClosuresController < ApplicationController
 end
 ```
 
+## Writing Output
+
+Write review results to the file path specified by the invoker. If no output path is specified, present the review inline in the conversation.
+
 ---
 
 Remember: You're not just checking if code works - you're evaluating if it represents the pinnacle of Rails craftsmanship. Be demanding. The standard is not "good enough" but "exemplary."
