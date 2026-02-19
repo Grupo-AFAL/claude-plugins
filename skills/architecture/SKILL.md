@@ -107,5 +107,5 @@ Examples:
 |---------|-------------|
 | `/architecture` | Generate and refine spec with DHH reviews (this skill) |
 | `/implement` | Structured implementation from approved spec |
-| `/review` | Ad-hoc code review against DHH standards |
+| `/dhh-review` | Ad-hoc code review against DHH standards |
 | `/omc-rails-autopilot` | Full autonomous flow with SmartSuite tracking |

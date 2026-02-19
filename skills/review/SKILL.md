@@ -1,16 +1,20 @@
 ---
-name: review
-description: This skill should be used when the user asks to "review code", "review this file", "check code quality", "DHH review", "review my changes", "review staged changes", "review branch", "is this code Rails-worthy", "check for anti-patterns", "review my PR", "code review this", "check conventions", or invokes /review with a file path, directory, glob pattern, --staged, or --branch. Runs automated checks and invokes the dhh-code-reviewer agent for Rails-worthiness evaluation.
+name: dhh-review
+description: This skill should be used when the user asks to "review code", "review this file", "check code quality", "DHH review", "review my changes", "review staged changes", "review branch", "is this code Rails-worthy", "check for anti-patterns", "review my PR", "code review this", "check conventions", or invokes /dhh-review with a file path, directory, glob pattern, --staged, or --branch. Runs automated checks and invokes the dhh-code-reviewer agent for Rails-worthiness evaluation.
 ---
 
 # Review Code for Quality Issues
 
 Review existing code against 37signals/DHH standards and identify improvements.
 
+## Persistence Mandate
+
+**Never abandon this workflow mid-review.** Complete all steps in order. If a step fails or a tool is unavailable, document it in the report and continue to the next step. Do not stop until the final report has been presented to the user. Individual failures (missing tools, unreadable files, agent errors) are not reasons to halt — they are items to note.
+
 ## Usage
 
 ```
-/review <target>
+/dhh-review <target>
 ```
 
 Where `<target>` is:
@@ -32,19 +36,26 @@ Based on the argument:
 4. **`--staged`**: Get files from `git diff --staged --name-only`
 5. **`--branch`**: Get files from `git diff main...HEAD --name-only`
 
+**Done when**: You have a list of files to review. If no files match, report "No files found for target" and stop — this is the only valid early exit.
+
 ### Step 2: Pre-Analysis
 
-Run automated checks first:
+Run automated checks. **If a tool is not installed or fails, skip it and note "tool unavailable" in the report — do not stop.**
 
 ```bash
-# Run Rubocop on the files
+# Run Rubocop on the files (skip if bin/rubocop not found)
 bin/rubocop --format json [files]
 
-# Run Brakeman for security
+# Run Brakeman for security (skip if bin/brakeman not found)
 bin/brakeman --only-files [files] --format json
 ```
 
-Collect any issues found.
+**Fallbacks:**
+- `bin/rubocop` not found → try `bundle exec rubocop` → if still unavailable, note "Rubocop not configured" and continue
+- `bin/brakeman` not found → try `bundle exec brakeman` → if still unavailable, note "Brakeman not configured" and continue
+- Command exits with error → capture the error output, include it in the report, continue
+
+**Done when**: Automated check results (or unavailability notes) are collected.
 
 ### Step 3: Invoke DHH Reviewer
 
@@ -53,6 +64,10 @@ For each file or logical group of files, invoke the `dhh-code-reviewer` agent:
 - Pass the file contents
 - Pass any Rubocop/Brakeman issues found
 - Request structured feedback
+
+**If the agent fails or returns an error**: Note the failure in the report, move to the next file. Do not abandon the entire review because one file's agent call failed.
+
+**Done when**: All files have been reviewed by the agent (or have a documented failure note).
 
 ### Step 4: Generate Review Report
 
@@ -70,10 +85,10 @@ Create a structured report:
 ## Automated Checks
 
 ### Rubocop
-[List any offenses]
+[List any offenses, or "Not configured / unavailable"]
 
 ### Brakeman
-[List any security warnings]
+[List any security warnings, or "Not configured / unavailable"]
 
 ## DHH Review
 
@@ -97,6 +112,8 @@ Create a structured report:
 ...
 ```
 
+**Done when**: The report is fully written and presented to the user.
+
 ### Step 5: Offer to Apply Fixes
 
 Ask the user:
@@ -105,6 +122,8 @@ Ask the user:
 > 1. **Apply auto-fixes** (Rubocop -a, simple refactors)
 > 2. **Generate refactored code** for critical issues
 > 3. **Just provide the report** (no changes)
+
+**Done when**: User has been asked. Wait for their response.
 
 ## Review Categories
 
@@ -159,7 +178,7 @@ Works with the full AFAL development workflow:
 
 | Command | When to Use |
 |---------|-------------|
-| `/review` | Ad-hoc code review (this skill) |
+| `/dhh-review` | Ad-hoc code review (this skill) |
 | `/architecture` | Generate and refine spec with DHH reviews |
 | `/implement` | Structured implementation from approved spec |
 | `/omc-rails-autopilot` | Full autonomous flow with SmartSuite tracking |

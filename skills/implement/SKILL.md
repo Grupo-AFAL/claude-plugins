@@ -131,5 +131,5 @@ git commit -m "Add notification system"
 |---------|-------------|
 | `/architecture` | Generate and refine spec with DHH reviews |
 | `/implement` | Structured implementation from approved spec (this skill) |
-| `/review` | Ad-hoc code review against DHH standards |
+| `/dhh-review` | Ad-hoc code review against DHH standards |
 | `/omc-rails-autopilot` | Full autonomous flow with SmartSuite tracking |

@@ -164,7 +164,7 @@ If after 5 review passes the code still is not approved:
 |---------|-------------|
 | `/architecture` | Generate and refine spec with iterative DHH reviews |
 | `/implement` | Structured implementation from approved spec |
-| `/review` | Ad-hoc code review against DHH standards |
+| `/dhh-review` | Ad-hoc code review against DHH standards |
 | `/omc-rails-autopilot` | Full autonomous flow with SmartSuite tracking |
 
 Typical flow: `/architecture` to generate and refine a spec, then `/omc-rails-autopilot: STORY_ID` for autonomous implementation.
