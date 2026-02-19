@@ -32,7 +32,7 @@ Generates refined architecture specifications through iterative DHH review. Invo
 ### `/implement`
 Structured implementation from an approved architecture spec. Creates a todo list from the spec, implements step-by-step with tests after each change, runs full verification (tests, rubocop, brakeman), and gets a DHH code review before finalization.
 
-### `/review`
+### `/dhh-review`
 Code review against DHH/37signals standards. Accepts a file, directory, glob, `--staged`, or `--branch`. Runs automated checks (Rubocop, Brakeman), invokes the `dhh-code-reviewer` agent, and produces a structured report with severity levels and actionable fixes.
 
 ### `/omc-rails-autopilot`
