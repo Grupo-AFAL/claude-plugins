@@ -8,7 +8,7 @@
     {
       "name": "afal-rails-tools",
       "description": "Shared Claude Code skills and agents for AFAL Rails applications: autonomous development, DHH code reviews, architecture specs, Hotwire, Pundit, Bali ViewComponents, and Rails conventions",
-      "version": "2.3.0",
+      "version": "2.3.1",
       "source": "./",
       "author": {
         "name": "Grupo AFAL",

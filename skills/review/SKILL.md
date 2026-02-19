@@ -145,17 +145,15 @@ Ask the user:
 > 2. **Generate refactored code** for critical issues
 > 3. **Just provide the report** (no changes)
 
-**Done when**: User has been asked. Wait for their response.
+Wait for the user's response. Apply or skip fixes based on their answer.
 
-### Step 6: Deactivate Persistence
-
-After presenting the report and asking about fixes, clear the state file to allow the session to close cleanly:
+Once the user's request is handled (fixes applied or declined), clear the state file:
 
 ```bash
 rm -f .omc/state/dhh-review-state.json
 ```
 
-**Done when**: State file deleted. Review is complete.
+**Done when**: User's fix preference handled and state file deleted. Review is complete.
 
 ## Review Categories
 
