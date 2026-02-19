@@ -1,0 +1,17 @@
+{
+  "description": "AFAL Rails Tools plugin hooks",
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/dhh-review-persistence.cjs\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -26,6 +26,28 @@ Where `<target>` is:
 
 ## Workflow
 
+### Step 0: Activate Persistence
+
+Run this immediately to create the state file that prevents the session from closing mid-review:
+
+```bash
+node -e "
+const fs = require('fs');
+fs.mkdirSync('.omc/state', { recursive: true });
+fs.writeFileSync('.omc/state/dhh-review-state.json', JSON.stringify({
+  active: true,
+  started_at: new Date().toISOString(),
+  target: process.argv[1],
+  reinforcement_count: 0,
+  last_checked_at: new Date().toISOString()
+}, null, 2));
+" -- "<TARGET>"
+```
+
+Replace `<TARGET>` with the actual review target (file path, `--staged`, `--branch`, etc.).
+
+**Done when**: State file exists at `.omc/state/dhh-review-state.json`.
+
 ### Step 1: Identify Files to Review
 
 Based on the argument:
@@ -124,6 +146,16 @@ Ask the user:
 > 3. **Just provide the report** (no changes)
 
 **Done when**: User has been asked. Wait for their response.
+
+### Step 6: Deactivate Persistence
+
+After presenting the report and asking about fixes, clear the state file to allow the session to close cleanly:
+
+```bash
+rm -f .omc/state/dhh-review-state.json
+```
+
+**Done when**: State file deleted. Review is complete.
 
 ## Review Categories
 
