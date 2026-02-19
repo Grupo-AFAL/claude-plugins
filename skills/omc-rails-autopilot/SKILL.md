@@ -30,9 +30,10 @@ Fully autonomous Rails development workflow combining Oh-My-ClaudeCode orchestra
 Phase 0:   Fetch story from SmartSuite, update status, create git worktree
 Phase 0.5: Write failing tests FIRST (TDD red phase) -- MANDATORY
 Phase 1:   OMC autopilot implements to make tests pass (green phase)
+Phase 1.5: UI integration -- ensure new pages are reachable from the UI
 Phase 2:   Iterative AI DHH reviews with auto-applied feedback (refactor phase)
 Phase 3:   Quality gates (tests, rubocop, brakeman)
-Phase 4:   Commit, create PR, update SmartSuite status
+Phase 4:   Update CHANGELOG, commit, create PR, update SmartSuite status
 ```
 
 ## Prerequisites
@@ -85,6 +86,18 @@ Delegate to OMC autopilot to implement minimum code making all tests pass. Exist
 
 **Goal:** Minimum code to reach GREEN state. Do not over-engineer.
 
+## Phase 1.5: UI Integration
+
+Ensure new functionality is reachable from the application UI -- do not leave features accessible only by typing URLs manually.
+
+1. Check if the story adds new routes with user-facing pages (index, show, or dedicated views)
+2. If yes, find the project's navigation structure (sidebar partial, nav menu, parent show page) and add a link
+3. Gate visibility behind authorization (e.g., `policy(:resource).index?` or role checks consistent with the project's Pundit policies)
+4. For nested resources, link from the parent's show page rather than the global nav
+5. Run tests to confirm nothing broke
+
+**Exit criteria:** New pages are reachable from the UI without knowing the URL.
+
 ## Phase 2: Iterative AI Review (Refactor Phase)
 
 Use the `dhh-code-reviewer` agent for the TDD refactor phase:
@@ -113,7 +126,13 @@ All three gates must pass. If any fails, fix the issue and re-run.
 
 ## Phase 4: Commit & PR
 
-1. **Commit** with conventional format:
+1. **Update CHANGELOG.md** under `## [Unreleased]` (create the file if it doesn't exist):
+   - Add a concise entry under the appropriate heading (`### Added`, `### Changed`, `### Fixed`)
+   - Include the story ID in the entry
+   - Follow the existing format if the file already has entries
+   - Example: `- Roles and permissions system with JSONB-based access control (GC-FND-004-US02)`
+
+2. **Commit** with conventional format:
    ```bash
    git commit -m "feat(STORY_ID): description
 
@@ -122,13 +141,13 @@ All three gates must pass. If any fails, fix the issue and re-run.
    Co-Authored-By: Claude <noreply@anthropic.com>"
    ```
 
-2. **Push and create PR:**
+3. **Push and create PR:**
    ```bash
    git push -u origin feature/STORY_ID
    gh pr create --title "feat(STORY_ID): title" --body "..."
    ```
 
-3. **Update SmartSuite** to `ready_for_review` with PR link
+4. **Update SmartSuite** to `ready_for_review` with PR link
 
 ## Escalation
 
