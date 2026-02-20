@@ -32,6 +32,7 @@ Phase 0.5: Write failing tests FIRST (TDD red phase) -- MANDATORY
 Phase 1:   OMC autopilot implements to make tests pass (green phase)
 Phase 1.5: UI integration -- ensure new pages are reachable from the UI
 Phase 2:   Iterative AI DHH reviews with auto-applied feedback (refactor phase)
+Phase 2.5: UI Review -- assess and improve visual quality of new interfaces
 Phase 3:   Quality gates (tests, rubocop, brakeman)
 Phase 4:   Update CHANGELOG, commit, create PR, update SmartSuite status
 ```
@@ -106,11 +107,30 @@ Use the `dhh-code-reviewer` agent for the TDD refactor phase:
 |------|--------|
 | Pass 1 | Initial review -- identify all violations, auto-apply ALL feedback |
 | Pass 2 | Second review -- verify fixes, catch new issues, auto-apply feedback |
-| Pass 3 | Final review -- must receive "Rails-worthy" verdict |
-| Pass 4-5 | If still not approved, continue applying feedback |
-| After 5 | Escalate -- do NOT commit unapproved code |
+| Pass 3 | Third review -- re-examine patterns, ensure consistency |
+| Pass 4 | Fourth review -- address any remaining subtle issues |
+| Pass 5 | Fifth review -- approaching "Rails-worthy" target |
+| Pass 6 | Sixth review -- must receive "Rails-worthy" verdict |
+| Pass 7 | Final review -- escalate if still not approved |
+| After 7 | Escalate -- do NOT commit unapproved code |
 
 After each feedback application, run tests to confirm GREEN state is maintained.
+
+## Phase 2.5: UI Review
+
+Assess and improve the visual quality of all new or modified interfaces introduced by this story.
+
+1. Identify all new/modified views (ERB templates, ViewComponents, partials)
+2. Run `/bali-view-audit` to catch raw HTML that should use Bali components -- apply all findings
+3. Invoke `/oh-my-claudecode:frontend-ui-ux` skill for a visual quality review of each screen:
+   - Layout and spacing consistency
+   - Component choices (prefer Bali/DaisyUI over custom HTML)
+   - Responsive behavior
+   - Empty states and loading states
+4. Apply all UI improvements, prioritizing Bali components and DaisyUI patterns
+5. Run tests to confirm GREEN state is maintained
+
+**Exit criteria:** New interfaces are visually polished, use Bali components consistently, and all tests remain green.
 
 ## Phase 3: Quality Gates
 
@@ -151,7 +171,7 @@ All three gates must pass. If any fails, fix the issue and re-run.
 
 ## Escalation
 
-If after 5 review passes the code still is not approved:
+If after 7 review passes the code still is not approved:
 
 1. Stop and document blockers
 2. Create a GitHub issue with what was attempted, unresolved feedback, and files needing human review
