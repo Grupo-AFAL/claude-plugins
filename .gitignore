@@ -2,4 +2,4 @@
 *.swp
 .omc/
 .mcp.json
-skills/**/CLAUDE.md
+**/skills/**/CLAUDE.md
