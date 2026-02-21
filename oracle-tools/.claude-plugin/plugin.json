@@ -1,0 +1,13 @@
+{
+  "name": "oracle-tools",
+  "description": "Claude Code skills for AFAL oracle-gateway: Oracle EBS domain expertise, JRuby + oracle_enhanced patterns, JDBC configuration, and EBS PL/SQL API integration",
+  "version": "1.0.0",
+  "author": {
+    "name": "Grupo AFAL",
+    "url": "https://github.com/Grupo-AFAL"
+  },
+  "homepage": "https://github.com/Grupo-AFAL/afal-claude-plugins",
+  "repository": "https://github.com/Grupo-AFAL/afal-claude-plugins",
+  "license": "UNLICENSED",
+  "keywords": ["oracle", "ebs", "jruby", "oracle_enhanced", "jdbc", "afal"]
+}
