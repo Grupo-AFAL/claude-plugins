@@ -1,0 +1,13 @@
+{
+  "name": "afal-data-tools",
+  "description": "Claude Code skills for AFAL data engineering: Fivetran custom SDK connectors (FOCALTEC, WMS, GEOTAB), entity configuration, incremental sync strategies, and connector testing patterns",
+  "version": "1.0.0",
+  "author": {
+    "name": "Grupo AFAL",
+    "url": "https://github.com/Grupo-AFAL"
+  },
+  "homepage": "https://github.com/Grupo-AFAL/afal-claude-plugins",
+  "repository": "https://github.com/Grupo-AFAL/afal-claude-plugins",
+  "license": "UNLICENSED",
+  "keywords": ["fivetran", "python", "data-engineering", "etl", "connectors", "afal"]
+}
