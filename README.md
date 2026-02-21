@@ -14,10 +14,10 @@ Install the plugin for your project type:
 
 ```bash
 # AFAL Rails apps (Hotwire, Bali, Pundit, etc.)
-claude plugin install afal-rails-tools
+claude plugin install rails-tools
 
 # Data engineering (Fivetran SDK connectors)
-claude plugin install afal-data-tools
+claude plugin install data-tools
 
 # Oracle EBS integration (oracle-gateway project)
 claude plugin install oracle-tools
@@ -25,7 +25,7 @@ claude plugin install oracle-tools
 
 ---
 
-## `afal-rails-tools`
+## `rails-tools`
 
 Skills and agents for AFAL Rails applications using Hotwire, Bali ViewComponents, Pundit, and the AFAL stack.
 
@@ -86,7 +86,7 @@ DHH-style Rails conventions enforcement for code reviews. Covers controller/mode
 
 ---
 
-## `afal-data-tools`
+## `data-tools`
 
 Skills for AFAL data engineering projects using the Fivetran Connector SDK.
 
