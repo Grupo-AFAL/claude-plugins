@@ -7,7 +7,7 @@ Private Claude Code plugin marketplace for Grupo AFAL. This monorepo packages sh
 Add this marketplace to Claude Code:
 
 ```bash
-claude plugin marketplace add Grupo-AFAL/afal-claude-plugins
+claude plugin marketplace add Grupo-AFAL/claude-plugins
 ```
 
 Install the plugin for your project type:

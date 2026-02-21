@@ -6,8 +6,8 @@
     "name": "Grupo AFAL",
     "url": "https://github.com/Grupo-AFAL"
   },
-  "homepage": "https://github.com/Grupo-AFAL/afal-claude-plugins",
-  "repository": "https://github.com/Grupo-AFAL/afal-claude-plugins",
+  "homepage": "https://github.com/Grupo-AFAL/claude-plugins",
+  "repository": "https://github.com/Grupo-AFAL/claude-plugins",
   "license": "UNLICENSED",
   "keywords": ["rails", "ruby", "bali", "viewcomponent", "afal", "autonomous"]
 }
