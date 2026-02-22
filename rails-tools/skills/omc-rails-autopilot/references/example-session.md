@@ -74,6 +74,72 @@ Agent: Invoking dhh-code-reviewer for Pass 3...
 DHH Review: "Rails-worthy. Clean use of ancestry and concerns.
             The scoped queries in the controller are idiomatic."
 
+=== Phase 2.5: Visual Verification ===
+
+Agent: Starting dev server for E2E browser testing...
+       bin/rails server -p 3001 -e development -d --pid tmp/pids/server-e2e.pid
+       Checking for auth bypass... found BYPASS_AUTH=true in .env.development
+       BYPASS_AUTH=true bin/rails server -p 3001 -e development -d --pid tmp/pids/server-e2e.pid
+       Server ready at http://localhost:3001
+
+Agent: Running E2E user flow with agent-browser...
+
+       Step 1 - Navigate from root
+       agent-browser open http://localhost:3001/
+       agent-browser snapshot -i
+       # Found: "Departments" link in sidebar under Organization
+       agent-browser find text "Departments" click
+       agent-browser wait --load networkidle
+       agent-browser screenshot --full tmp/screenshots/e2e-01-index-empty.png
+
+       Step 2 - Create a department
+       agent-browser find role button click --name "New Department"
+       agent-browser wait --load networkidle
+       agent-browser screenshot tmp/screenshots/e2e-02-new-form.png
+       agent-browser snapshot -i
+       # @e1 = name field, @e2 = parent dropdown, @e3 = Save button
+       agent-browser fill @e1 "Engineering"
+       agent-browser click @e3
+       agent-browser wait --load networkidle
+       agent-browser screenshot tmp/screenshots/e2e-03-after-create.png
+       # Verified: "Department was successfully created" flash visible
+
+       Step 3 - Show page
+       agent-browser find text "Engineering" click
+       agent-browser wait --load networkidle
+       agent-browser screenshot --full tmp/screenshots/e2e-04-show-page.png
+
+       Step 4 - Edit
+       agent-browser find text "Edit" click
+       agent-browser wait --load networkidle
+       agent-browser snapshot -i
+       agent-browser fill @e1 "Engineering & Product"
+       agent-browser find role button click --name "Save"
+       agent-browser wait --load networkidle
+       agent-browser screenshot tmp/screenshots/e2e-05-after-update.png
+       # Verified: name updated in page header
+
+Agent: E2E flows passed. All screenshots captured.
+
+Agent: Running bali-view-audit on modified views...
+       app/views/departments/, app/components/department_*.rb
+       Finding: Index uses raw <table> -- should use Bali::DataTableComponent
+       Applying fix...
+
+Agent: Invoking frontend-ui-ux with screenshots and view files...
+       Screenshots: tmp/screenshots/e2e-*.png
+       Views: app/views/departments/, app/components/department_header_component.rb
+       Feedback: "Form fields need more vertical spacing. Department name field
+                  should use Bali::FormComponent. Empty state on index lacks
+                  an icon and call-to-action text."
+       Applying improvements...
+       Running tests... 14 tests, 0 failures (still GREEN)
+
+Agent: Stopping dev server and cleaning up screenshots...
+       kill $(cat tmp/pids/server-e2e.pid)
+       rm -rf tmp/screenshots/e2e-*.png
+       Phase 2.5 complete. Visual review approved.
+
 === Phase 3: Quality Gates ===
 
 Agent: Running quality gates...

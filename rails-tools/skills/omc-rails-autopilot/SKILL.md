@@ -32,7 +32,7 @@ Phase 0.5: Write failing tests FIRST (TDD red phase) -- MANDATORY
 Phase 1:   OMC autopilot implements to make tests pass (green phase)
 Phase 1.5: UI integration -- ensure new pages are reachable from the UI
 Phase 2:   Iterative AI DHH reviews with auto-applied feedback (refactor phase)
-Phase 2.5: UI Review -- assess and improve visual quality of new interfaces
+Phase 2.5: Visual Verification -- E2E browser flows + visual quality review
 Phase 3:   Quality gates (tests, rubocop, brakeman)
 Phase 4:   Update CHANGELOG, commit, create PR, update SmartSuite status
 ```
@@ -116,21 +116,72 @@ Use the `dhh-code-reviewer` agent for the TDD refactor phase:
 
 After each feedback application, run tests to confirm GREEN state is maintained.
 
-## Phase 2.5: UI Review
+## Phase 2.5: Visual Verification
 
-Assess and improve the visual quality of all new or modified interfaces introduced by this story.
+Verify the feature works as a real user would experience it, then review and improve the visual quality of all new or modified interfaces. This phase combines E2E browser testing with UI quality review into a single visual pass.
 
-1. Identify all new/modified views (ERB templates, ViewComponents, partials)
-2. Run `/bali-view-audit` to catch raw HTML that should use Bali components -- apply all findings
-3. Invoke `/oh-my-claudecode:frontend-ui-ux` skill for a visual quality review of each screen:
-   - Layout and spacing consistency
-   - Component choices (prefer Bali/DaisyUI over custom HTML)
-   - Responsive behavior
-   - Empty states and loading states
-4. Apply all UI improvements, prioritizing Bali components and DaisyUI patterns
-5. Run tests to confirm GREEN state is maintained
+See **`references/e2e-browser-testing.md`** for detailed patterns, authentication handling, and Turbo-specific guidance.
 
-**Exit criteria:** New interfaces are visually polished, use Bali components consistently, and all tests remain green.
+### 2.5.1 Server Setup
+
+Start the development server for browser testing:
+
+```bash
+bin/rails server -p 3001 -e development -d --pid tmp/pids/server-e2e.pid
+timeout 30 bash -c 'until curl -sf http://localhost:3001/up > /dev/null 2>&1; do sleep 1; done'
+```
+
+Check for a dev auth bypass if the app requires authentication -- see **`references/e2e-browser-testing.md`** for AFAL OmniAuth patterns.
+
+### 2.5.2 E2E User Flow Testing
+
+Use `agent-browser` to simulate the complete user journey from the story. Navigate from the application root, not by typing the URL directly.
+
+1. Navigate to the feature via the UI (sidebar, parent page, or nav link added in Phase 1.5)
+2. Exercise all primary CRUD flows the story introduces:
+   - **Create:** fill and submit the form, verify success feedback and data persisted
+   - **Read:** verify index (including empty state) and show pages display correctly
+   - **Update:** edit a record, verify changes reflected
+   - **Delete:** if applicable, verify deletion and any confirmation dialogs
+3. Take a screenshot at each major step:
+   ```bash
+   agent-browser screenshot --full tmp/screenshots/e2e-01-index.png
+   agent-browser screenshot tmp/screenshots/e2e-02-new-form.png
+   # ... continue per step
+   ```
+4. Re-snapshot after every Turbo navigation (refs are invalidated on page change):
+   ```bash
+   agent-browser wait --load networkidle
+   agent-browser snapshot -i  # Always re-snapshot after navigation
+   ```
+
+**Exit criteria:** All primary user flows complete without errors; screenshots captured for every major screen.
+
+### 2.5.3 Visual Quality Review
+
+With screenshots and view files in hand, run a combined visual audit:
+
+1. Run `/bali-view-audit` on all modified views -- apply all findings immediately
+2. Invoke `/oh-my-claudecode:frontend-ui-ux` with the screenshots and view file paths:
+   - Pass screenshot paths (e.g., `tmp/screenshots/e2e-*.png`) for visual context
+   - Pass view file paths (e.g., `app/views/[resource]/`, `app/components/`) for code review
+   - Review focus: layout/spacing, Bali component usage, empty states, form layout, responsive behavior
+3. Apply all identified improvements, prioritizing Bali components and DaisyUI patterns
+
+### 2.5.4 Teardown and Verification
+
+```bash
+# Stop dev server
+kill $(cat tmp/pids/server-e2e.pid 2>/dev/null) 2>/dev/null || true
+rm -f tmp/pids/server-e2e.pid
+
+# Clean up screenshots (do not commit them)
+rm -rf tmp/screenshots/e2e-*.png
+```
+
+Run tests to confirm GREEN state is maintained after UI improvements.
+
+**Exit criteria:** All E2E flows pass without errors, visual review approved, Bali components used consistently, tests green.
 
 ## Phase 3: Quality Gates
 
@@ -203,3 +254,4 @@ Follow the project's CLAUDE.md constraints. Key rules:
 - **`references/smartsuite.md`** -- SmartSuite MCP calls, table IDs, status flow, story ID format
 - **`references/tdd-patterns.md`** -- Test writing conventions, model/controller/system test examples, fixture patterns
 - **`references/example-session.md`** -- Complete walkthrough showing the full autopilot flow with a real story
+- **`references/e2e-browser-testing.md`** -- Server setup/teardown, OmniAuth bypass patterns, CRUD flow examples, screenshot workflow, and frontend-ui-ux integration guide
