@@ -1,7 +1,7 @@
 {
   "name": "docs-tools",
   "description": "Claude Code skills for AFAL Rails documentation: scaffold Astro Starlight docs sites and keep documentation in sync with code changes",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": {
     "name": "Grupo AFAL",
     "url": "https://github.com/Grupo-AFAL"

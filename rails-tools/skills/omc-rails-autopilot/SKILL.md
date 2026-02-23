@@ -32,9 +32,10 @@ Phase 0.5: Write failing tests FIRST (TDD red phase) -- MANDATORY
 Phase 1:   OMC autopilot implements to make tests pass (green phase)
 Phase 1.5: UI integration -- ensure new pages are reachable from the UI
 Phase 2:   Iterative AI DHH reviews with auto-applied feedback (refactor phase)
-Phase 2.5: Visual Verification -- E2E browser flows + visual quality review
+Phase 2.5: Visual Verification -- E2E browser flows + documentation screenshots + visual quality review
 Phase 3:   Quality gates (tests, rubocop, brakeman)
 Phase 4:   Update CHANGELOG, commit, create PR, update SmartSuite status
+Phase 4.5: Update documentation -- sync docs site with new feature, include screenshots
 ```
 
 ## Prerequisites
@@ -137,6 +138,18 @@ Check for a dev auth bypass if the app requires authentication -- see **`referen
 
 Use `agent-browser` to simulate the complete user journey from the story. Navigate from the application root, not by typing the URL directly.
 
+**Before navigating:** Ensure the database has realistic sample data so screenshots reflect daily usage, not empty states. Create seed data via the Rails console or a targeted seed script:
+
+```bash
+bin/rails runner "
+  # Create enough records to show the feature in realistic use
+  # e.g. 3-5 representative records covering common variations
+  # Scope to the test organization/user used in the browser session
+"
+```
+
+Only skip seeding if the explicit purpose of a screenshot is to document the empty state (e.g. onboarding flow, zero-records message).
+
 1. Navigate to the feature via the UI (sidebar, parent page, or nav link added in Phase 1.5)
 2. Exercise all primary CRUD flows the story introduces:
    - **Create:** fill and submit the form, verify success feedback and data persisted
@@ -154,8 +167,16 @@ Use `agent-browser` to simulate the complete user journey from the story. Naviga
    agent-browser wait --load networkidle
    agent-browser snapshot -i  # Always re-snapshot after navigation
    ```
+5. Save documentation screenshots — select 2-4 key screens that best represent the feature for end users:
+   ```bash
+   mkdir -p docs/src/assets/screenshots/<story-id>
+   cp tmp/screenshots/e2e-01-index.png docs/src/assets/screenshots/<story-id>/index.png
+   cp tmp/screenshots/e2e-02-new-form.png docs/src/assets/screenshots/<story-id>/new-form.png
+   # Choose the screens that show: list view, detail view, form, key interaction
+   ```
+   These are committed to the repo (not temp files) and will be included in the docs site during Phase 4.5.
 
-**Exit criteria:** All primary user flows complete without errors; screenshots captured for every major screen.
+**Exit criteria:** All primary user flows complete without errors; screenshots captured for every major screen; documentation screenshots saved to `docs/src/assets/screenshots/<story-id>/`.
 
 ### 2.5.3 Visual Quality Review
 
@@ -219,6 +240,39 @@ All three gates must pass. If any fails, fix the issue and re-run.
    ```
 
 4. **Update SmartSuite** to `ready_for_review` with PR link
+
+## Phase 4.5: Documentation Update
+
+Update the project's Astro Starlight docs site to reflect the new feature. Skip this phase if `docs/astro.config.mjs` does not exist.
+
+1. **Check for docs site:**
+   ```bash
+   ls docs/astro.config.mjs 2>/dev/null && echo "docs present" || echo "no docs — skip phase"
+   ```
+
+2. **Invoke `/update-docs`** — detects changed files from the branch, maps code areas to doc pages, reads actual source for accuracy, and updates or creates MDX pages in Spanish.
+
+3. **Include screenshots** — if `docs/src/assets/screenshots/<story-id>/` was populated in Phase 2.5, reference the images in the relevant MDX pages:
+   ```mdx
+   ![Vista del listado](../../../assets/screenshots/gc-fnd-002-us01/index.png)
+
+   ![Formulario de creación](../../../assets/screenshots/gc-fnd-002-us01/new-form.png)
+   ```
+   Place screenshots after the prose description of each screen, not at the top of the page. Use descriptive Spanish alt text.
+
+4. **Verify build:**
+   ```bash
+   cd docs && bun run build
+   ```
+   Fix any errors before proceeding. Zero errors required.
+
+5. **Commit docs separately** on the same feature branch:
+   ```bash
+   git add docs/
+   git commit -m "docs(STORY_ID): update documentation with new feature"
+   ```
+
+The docs commit is included in the same PR as the feature. Reviewers can see both the implementation and its documentation in a single review.
 
 ## Escalation
 

@@ -8,7 +8,7 @@
     {
       "name": "rails-tools",
       "description": "Shared Claude Code skills and agents for AFAL Rails applications: autonomous development, DHH code reviews, architecture specs, Hotwire, Pundit, Bali ViewComponents, and Rails conventions",
-      "version": "2.5.0",
+      "version": "2.6.0",
       "source": "./rails-tools/",
       "author": {
         "name": "Grupo AFAL",
@@ -41,7 +41,7 @@
     {
       "name": "docs-tools",
       "description": "Claude Code skills for AFAL Rails documentation: scaffold Astro Starlight docs sites and keep documentation in sync with code changes",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "./docs-tools/",
       "author": {
         "name": "Grupo AFAL",

@@ -76,11 +76,31 @@ Callout syntax:
 - `:::caution` — warnings or gotchas
 - `:::tip` — best practices
 
-### 5. Update sidebar if needed
+### 5. Include screenshots if available
+
+Check for screenshots saved by the Rails Autopilot (Phase 2.5):
+
+```bash
+ls docs/src/assets/screenshots/ 2>/dev/null
+```
+
+If screenshots exist for the current story/feature, embed them in the relevant MDX pages after the prose description of each screen. Use relative paths from the MDX file location:
+
+```mdx
+![Vista del listado](../../../assets/screenshots/gc-fnd-002-us01/index.png)
+```
+
+Guidelines:
+- Place screenshots **after** the prose description, not at the top of the page
+- Use descriptive Spanish alt text that describes what the user sees
+- One screenshot per major screen (list, detail, form) — avoid redundant shots
+- Do not embed screenshots in the technical reference section
+
+### 6. Update sidebar if needed
 
 When pages are added or removed, update the `sidebar` array in `docs/astro.config.mjs`.
 
-### 6. Verify the build
+### 7. Verify the build
 
 ```bash
 cd docs && bun run build
