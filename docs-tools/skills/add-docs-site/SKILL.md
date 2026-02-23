@@ -7,6 +7,24 @@ description: This skill should be used when the user asks to "add a documentatio
 
 Scaffold an Astro Starlight documentation site inside a Rails application. The site builds to `public/docs/` (static HTML) and is served by Thruster/ActionDispatch with zero Rails config changes.
 
+## Visual-First Principle
+
+Diagrams communicate faster than text for processes, flows, and relationships. Prefer Mermaid diagrams whenever documenting:
+
+- Multi-step user workflows (flowcharts)
+- System relationships or data flow (sequence, entity diagrams)
+- Navigation or feature maps
+- Before/after comparisons
+
+The site uses `astro-mermaid` for diagram support — see Step 1.8 in `references/scaffold-steps.md` for setup. Use standard fenced code blocks in MDX:
+
+````mdx
+```mermaid
+flowchart LR
+  A[Inicio] --> B[Paso 1] --> C[Resultado]
+```
+````
+
 ## Documentation Structure
 
 The primary audience is **end users** — non-technical staff from different business areas who use the software daily. Technical and developer documentation is secondary.
@@ -83,6 +101,7 @@ All documentation is written in **Spanish**.
 - [ ] Logo copied to `docs/src/assets/` and `docs/public/favicon.svg`
 - [ ] Content pages written from actual source code (Step 2)
 - [ ] `.gitignore` updated (Step 3)
+- [ ] Mermaid installed: `bun add astro-mermaid mermaid` (Step 1.8)
 - [ ] `bun install` run — `bun.lock` committed (Step 4)
 - [ ] Build verified: `bun run build` — 0 errors (Step 4)
 - [ ] Dockerfile updated (Step 5)

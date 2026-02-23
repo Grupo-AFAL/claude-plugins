@@ -174,6 +174,42 @@ docs/
                 └── <page>.mdx
 ```
 
+### 1.8 Mermaid diagrams
+
+Install diagram support:
+
+```bash
+cd docs && bun add astro-mermaid mermaid
+```
+
+Update `docs/astro.config.mjs` to add the integration:
+
+```js
+import { defineConfig } from "astro/config";
+import starlight from "@astrojs/starlight";
+import mermaid from "astro-mermaid";
+
+export default defineConfig({
+  base: "/docs",
+  outDir: "../public/docs",
+  integrations: [
+    starlight({ /* ... existing config ... */ }),
+    mermaid({ autoTheme: true }),  // autoTheme follows Starlight's light/dark mode
+  ],
+});
+```
+
+Use in any MDX file with a standard fenced code block:
+
+````mdx
+```mermaid
+flowchart LR
+  A[Inicio] --> B[Procesar] --> C[Resultado]
+```
+````
+
+**`autoTheme: true`** is required — without it, diagrams render with a fixed theme that clashes with Starlight's dark mode.
+
 ---
 
 ## Step 2 — Content pages

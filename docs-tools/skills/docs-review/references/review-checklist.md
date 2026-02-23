@@ -54,6 +54,13 @@ Apply to each page during `/docs-review`.
 - [ ] Label in sidebar matches (or is a shorter version of) the page `title`
 - [ ] "Referencia técnica" section has `collapsed: true`
 
+## Visual Communication
+
+- [ ] Processes and multi-step workflows have a Mermaid flowchart (not just prose steps)
+- [ ] System relationships or data flows have a sequence or entity diagram where helpful
+- [ ] Mermaid blocks render correctly (check build output — broken syntax causes build errors)
+- [ ] Diagrams use Spanish labels to match the surrounding content
+
 ## Content Completeness
 
 - [ ] Page covers the full scope implied by its title — no major gaps

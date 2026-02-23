@@ -51,6 +51,7 @@ Read each changed source file before writing documentation. The code is always t
 
 **Audience priority:** End-user pages (task guides for non-technical staff) take precedence over technical reference. When a code change affects both, update the end-user guide first and in more depth. Technical reference pages (API details, architecture notes) are secondary — update them but keep them in the collapsed "Referencia técnica" sidebar section.
 
+- **Prefer diagrams over prose** for processes, flows, and relationships — use Mermaid fenced blocks (```mermaid) whenever a workflow, sequence, or system relationship is being documented
 - Write all content in **Spanish**
 - Match existing style: check other `.mdx` files in `docs/src/content/docs/` for formatting reference
 - For end-user pages: write around tasks and outcomes, not internal mechanics — plain language, step-by-step
