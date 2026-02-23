@@ -7,6 +7,22 @@ description: This skill should be used when the user asks to "add a documentatio
 
 Scaffold an Astro Starlight documentation site inside a Rails application. The site builds to `public/docs/` (static HTML) and is served by Thruster/ActionDispatch with zero Rails config changes.
 
+## Documentation Structure
+
+The primary audience is **end users** — non-technical staff from different business areas who use the software daily. Technical and developer documentation is secondary.
+
+Structure the sidebar to reflect this:
+
+| Section type | Position | Collapsed by default |
+|-------------|----------|---------------------|
+| Task-based guides for end users | Top — most visible | No |
+| Feature walkthroughs, how-tos | Middle | No |
+| Technical reference (API, architecture, environment) | Bottom | Yes |
+
+Write end-user pages around **what the user does**, not how the system works internally. Use plain language, step-by-step flows, and screenshots when helpful. Technical accuracy still matters — read the source — but present it in terms of outcomes and tasks.
+
+Developer/API documentation belongs in a collapsible "Referencia técnica" section at the bottom of the sidebar, not at the top.
+
 ## Architecture Decisions
 
 | Decision | Choice | Why |

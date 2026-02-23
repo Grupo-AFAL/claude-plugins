@@ -52,14 +52,29 @@ export default defineConfig({
       },
       customCss: ["./src/styles/custom.css"],
       sidebar: [
+        // End-user sections first — most visible, not collapsed
         {
           label: "Empezando",
           items: [
             { label: "Introducción", slug: "empezando/introduccion" },
-            { label: "Instalación", slug: "empezando/instalacion" },
+            { label: "Cómo acceder", slug: "empezando/acceso" },
           ],
         },
-        // Add more sections as needed...
+        {
+          label: "Guías",
+          items: [
+            // Task-based guides for non-technical users
+            // e.g. { label: "Crear un registro", slug: "guias/crear-registro" },
+          ],
+        },
+        // Technical reference last — collapsed by default, less prominent
+        {
+          label: "Referencia técnica",
+          collapsed: true,
+          items: [
+            // API docs, architecture notes, environment setup, etc.
+          ],
+        },
       ],
     }),
   ],

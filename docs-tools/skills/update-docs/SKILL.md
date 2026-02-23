@@ -49,8 +49,12 @@ Read each changed source file before writing documentation. The code is always t
 
 ### 4. Update or create MDX pages
 
+**Audience priority:** End-user pages (task guides for non-technical staff) take precedence over technical reference. When a code change affects both, update the end-user guide first and in more depth. Technical reference pages (API details, architecture notes) are secondary — update them but keep them in the collapsed "Referencia técnica" sidebar section.
+
 - Write all content in **Spanish**
 - Match existing style: check other `.mdx` files in `docs/src/content/docs/` for formatting reference
+- For end-user pages: write around tasks and outcomes, not internal mechanics — plain language, step-by-step
+- For technical pages: accurate detail is fine, but keep them at the bottom of the sidebar (`collapsed: true`)
 - Use Starlight components where appropriate: `Card`, `CardGrid`, `Tabs`, `Steps`
 - Include code examples taken directly from the source
 - Update parameter tables, route tables, and API endpoint details to reflect current code
