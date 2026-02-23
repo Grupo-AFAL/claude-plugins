@@ -21,6 +21,9 @@ claude plugin install data-tools
 
 # Oracle EBS integration (oracle-gateway project)
 claude plugin install oracle-tools
+
+# Rails documentation sites (Astro Starlight)
+claude plugin install docs-tools
 ```
 
 ---
@@ -108,6 +111,20 @@ Oracle EBS domain expertise for querying EBS tables, calling PL/SQL APIs, and wr
 
 #### `/oracle-jruby`
 JRuby + oracle_enhanced technical patterns for Oracle database connectivity. Covers Oracle::Base model setup, raw SQL with bind variables, Oracle DATE type handling, NLS string semantics, CLOB management, JDBC connection pool tuning, and oracle_enhanced adapter gotchas.
+
+---
+
+## `docs-tools`
+
+Skills for adding and maintaining Astro Starlight documentation sites in AFAL Rails applications.
+
+### Skills
+
+#### `/add-docs-site`
+Scaffolds an Astro Starlight documentation site inside a Rails application. Covers the full setup: `docs/` directory structure, `astro.config.mjs`, AFAL brand CSS, content pages sourced from actual code, `.gitignore`, Dockerfile build stage integration, `Procfile.dev` dev server, GitHub Actions CI, and the project-local `/update-docs` command. Builds to `public/docs/` (static HTML served by Thruster — zero Rails config changes).
+
+#### `/update-docs`
+Updates the Astro Starlight documentation site to reflect recent code changes. Detects changed files via git, maps code areas to doc files (using a project-local mapping if available), reads actual source for accuracy, and updates or creates MDX pages in Spanish. Verifies with `bun run build` before finishing.
 
 ---
 
