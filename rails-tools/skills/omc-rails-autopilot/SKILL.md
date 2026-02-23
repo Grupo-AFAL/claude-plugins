@@ -27,16 +27,18 @@ Fully autonomous Rails development workflow combining Oh-My-ClaudeCode orchestra
 ## Workflow Overview
 
 ```
-Phase 0:   Fetch story from SmartSuite, update status, create git worktree
-Phase 0.5: Write failing tests FIRST (TDD red phase) -- MANDATORY
-Phase 1:   OMC autopilot implements to make tests pass (green phase)
-Phase 1.5: UI integration -- ensure new pages are reachable from the UI
-Phase 2:   Iterative AI DHH reviews with auto-applied feedback (refactor phase)
-Phase 2.5: Visual Verification -- E2E browser flows + documentation screenshots + visual quality review
-Phase 3:   Quality gates (tests, rubocop, brakeman)
-Phase 4:   Update CHANGELOG, commit, create PR, update SmartSuite status
-Phase 4.5: Update documentation -- sync docs site with new feature, include screenshots
+Phase 1: Fetch story from SmartSuite, update status, create git worktree
+Phase 2: Write failing tests FIRST (TDD red phase) -- MANDATORY
+Phase 3: OMC autopilot implements to make tests pass (green phase)
+Phase 4: UI integration -- ensure new pages are reachable from the UI
+Phase 5: Iterative AI DHH reviews with auto-applied feedback (refactor phase)
+Phase 6: Visual Verification -- E2E browser flows + documentation screenshots + visual quality review
+Phase 7: Quality gates (tests, rubocop, brakeman)
+Phase 8: Update CHANGELOG, commit, create PR
+Phase 9: Update documentation + SmartSuite -- sync docs site with new feature, include screenshots
 ```
+
+> **All 9 phases are required.** Before responding to the user, verify the **⛔ Mandatory Completion Checklist** at the bottom of this skill. The session cannot exit until Phase 9 is fully complete.
 
 ## Prerequisites
 
@@ -50,7 +52,7 @@ The project's CLAUDE.md must declare its SmartSuite project ID:
 
 This scopes all story queries to the current project. Without it, the autopilot will stop and ask for configuration. See **`references/smartsuite.md`** for the full list of project IDs.
 
-## Phase 0: Story Setup
+## Phase 1: Story Setup
 
 If a story code is provided (e.g., `GC-FND-002-US01`):
 
@@ -67,7 +69,7 @@ If a story code is provided (e.g., `GC-FND-002-US01`):
 
 If `next` is specified, query SmartSuite for the highest-priority `backlog` story **scoped to this project's Necesidad de Software** and proceed.
 
-## Phase 0.5: TDD Red Phase (MANDATORY)
+## Phase 2: TDD Red Phase (MANDATORY)
 
 **Tests are written BEFORE implementation code. This is not optional.**
 
@@ -82,13 +84,13 @@ Invoke `/oh-my-claudecode:tdd` for test writing guidance. See **`references/tdd-
 
 **Exit criteria:** All tests written and failing.
 
-## Phase 1: Implementation (Green Phase)
+## Phase 3: Implementation (Green Phase)
 
 Delegate to OMC autopilot to implement minimum code making all tests pass. Existing OMC-CLAUDE.md protocols apply (delegation-first, documentation-first, verification-before-completion).
 
 **Goal:** Minimum code to reach GREEN state. Do not over-engineer.
 
-## Phase 1.5: UI Integration
+## Phase 4: UI Integration
 
 Ensure new functionality is reachable from the application UI -- do not leave features accessible only by typing URLs manually.
 
@@ -100,7 +102,7 @@ Ensure new functionality is reachable from the application UI -- do not leave fe
 
 **Exit criteria:** New pages are reachable from the UI without knowing the URL.
 
-## Phase 2: Iterative AI Review (Refactor Phase)
+## Phase 5: Iterative AI Review (Refactor Phase)
 
 Use the `dhh-code-reviewer` agent for the TDD refactor phase:
 
@@ -117,13 +119,13 @@ Use the `dhh-code-reviewer` agent for the TDD refactor phase:
 
 After each feedback application, run tests to confirm GREEN state is maintained.
 
-## Phase 2.5: Visual Verification
+## Phase 6: Visual Verification
 
 Verify the feature works as a real user would experience it, then review and improve the visual quality of all new or modified interfaces. This phase combines E2E browser testing with UI quality review into a single visual pass.
 
 See **`references/e2e-browser-testing.md`** for detailed patterns, authentication handling, and Turbo-specific guidance.
 
-### 2.5.1 Server Setup
+### 6.1 Server Setup
 
 Start the development server for browser testing:
 
@@ -134,7 +136,7 @@ timeout 30 bash -c 'until curl -sf http://localhost:3001/up > /dev/null 2>&1; do
 
 Check for a dev auth bypass if the app requires authentication -- see **`references/e2e-browser-testing.md`** for AFAL OmniAuth patterns.
 
-### 2.5.2 E2E User Flow Testing
+### 6.2 E2E User Flow Testing
 
 Use `agent-browser` to simulate the complete user journey from the story. Navigate from the application root, not by typing the URL directly.
 
@@ -150,7 +152,7 @@ bin/rails runner "
 
 Only skip seeding if the explicit purpose of a screenshot is to document the empty state (e.g. onboarding flow, zero-records message).
 
-1. Navigate to the feature via the UI (sidebar, parent page, or nav link added in Phase 1.5)
+1. Navigate to the feature via the UI (sidebar, parent page, or nav link added in Phase 4)
 2. Exercise all primary CRUD flows the story introduces:
    - **Create:** fill and submit the form, verify success feedback and data persisted
    - **Read:** verify index (including empty state) and show pages display correctly
@@ -174,11 +176,11 @@ Only skip seeding if the explicit purpose of a screenshot is to document the emp
    cp tmp/screenshots/e2e-02-new-form.png docs/src/assets/screenshots/<story-id>/new-form.png
    # Choose the screens that show: list view, detail view, form, key interaction
    ```
-   These are committed to the repo (not temp files) and will be included in the docs site during Phase 4.5.
+   These are committed to the repo (not temp files) and will be included in the docs site during Phase 9.
 
 **Exit criteria:** All primary user flows complete without errors; screenshots captured for every major screen; documentation screenshots saved to `docs/src/assets/screenshots/<story-id>/`.
 
-### 2.5.3 Visual Quality Review
+### 6.3 Visual Quality Review
 
 With screenshots and view files in hand, run a combined visual audit:
 
@@ -189,14 +191,14 @@ With screenshots and view files in hand, run a combined visual audit:
    - Review focus: layout/spacing, Bali component usage, empty states, form layout, responsive behavior
 3. Apply all identified improvements, prioritizing Bali components and DaisyUI patterns
 
-### 2.5.4 Teardown and Verification
+### 6.4 Teardown and Verification
 
 ```bash
 # Stop dev server
 kill $(cat tmp/pids/server-e2e.pid 2>/dev/null) 2>/dev/null || true
 rm -f tmp/pids/server-e2e.pid
 
-# Clean up screenshots (do not commit them)
+# Clean up temp screenshots (do not commit them)
 rm -rf tmp/screenshots/e2e-*.png
 ```
 
@@ -204,7 +206,7 @@ Run tests to confirm GREEN state is maintained after UI improvements.
 
 **Exit criteria:** All E2E flows pass without errors, visual review approved, Bali components used consistently, tests green.
 
-## Phase 3: Quality Gates
+## Phase 7: Quality Gates
 
 Run ALL checks before committing. Pre-commit hooks enforce these:
 
@@ -216,7 +218,7 @@ bin/brakeman --no-pager -q  # No security warnings
 
 All three gates must pass. If any fails, fix the issue and re-run.
 
-## Phase 4: Commit & PR
+## Phase 8: Commit & PR
 
 1. **Update CHANGELOG.md** under `## [Unreleased]` (create the file if it doesn't exist):
    - Add a concise entry under the appropriate heading (`### Added`, `### Changed`, `### Fixed`)
@@ -239,20 +241,20 @@ All three gates must pass. If any fails, fix the issue and re-run.
    gh pr create --title "feat(STORY_ID): title" --body "..."
    ```
 
-**Do NOT update SmartSuite yet.** That happens after Phase 4.5 documentation is complete.
+**Do NOT update SmartSuite yet.** That happens after Phase 9 documentation is complete.
 
-## Phase 4.5: Documentation Update
+## Phase 9: Documentation & Delivery
 
-Update the project's Astro Starlight docs site to reflect the new feature. Skip this phase if `docs/astro.config.mjs` does not exist.
+Update the project's Astro Starlight docs site to reflect the new feature, then mark the story delivered. If `docs/astro.config.mjs` does not exist, skip steps 2-5 and go directly to step 6.
 
 1. **Check for docs site:**
    ```bash
-   ls docs/astro.config.mjs 2>/dev/null && echo "docs present" || echo "no docs — skip phase"
+   ls docs/astro.config.mjs 2>/dev/null && echo "docs present" || echo "no docs — skip to step 6"
    ```
 
 2. **Invoke `/update-docs`** — detects changed files from the branch, maps code areas to doc pages, reads actual source for accuracy, and updates or creates MDX pages in Spanish.
 
-3. **Include screenshots** — if `docs/src/assets/screenshots/<story-id>/` was populated in Phase 2.5, reference the images in the relevant MDX pages:
+3. **Include screenshots** — if `docs/src/assets/screenshots/<story-id>/` was populated in Phase 6, reference the images in the relevant MDX pages:
    ```mdx
    ![Vista del listado](../../../assets/screenshots/gc-fnd-002-us01/index.png)
 
@@ -272,7 +274,39 @@ Update the project's Astro Starlight docs site to reflect the new feature. Skip 
    git commit -m "docs(STORY_ID): update documentation with new feature"
    ```
 
-6. **Update SmartSuite to `ready_for_review`** with the PR link — this is the FINAL step of the entire run and only happens here, after documentation is complete.
+6. **Update SmartSuite to `ready_for_review`** with the PR link.
+
+7. **Mark autopilot complete** — signal the stop hook that all phases are done:
+   ```bash
+   node -e "
+     const { readdirSync, readFileSync, writeFileSync, existsSync } = require('fs');
+     const { join } = require('path');
+     const stateDir = '.omc/state';
+     // Session-scoped paths
+     const sessDir = join(stateDir, 'sessions');
+     let updated = false;
+     if (existsSync(sessDir)) {
+       for (const sid of readdirSync(sessDir)) {
+         const p = join(sessDir, sid, 'autopilot-state.json');
+         if (existsSync(p)) {
+           const s = JSON.parse(readFileSync(p));
+           s.phase = 'complete';
+           writeFileSync(p, JSON.stringify(s, null, 2));
+           updated = true;
+         }
+       }
+     }
+     // Legacy fallback
+     const legacy = join(stateDir, 'autopilot-state.json');
+     if (!updated && existsSync(legacy)) {
+       const s = JSON.parse(readFileSync(legacy));
+       s.phase = 'complete';
+       writeFileSync(legacy, JSON.stringify(s, null, 2));
+     }
+     console.log('Autopilot phase set to complete.');
+   "
+   ```
+   This allows the session to exit cleanly. Do not skip this step.
 
 The docs commit is included in the same PR as the feature. Reviewers can see both the implementation and its documentation in a single review.
 
@@ -283,18 +317,19 @@ The docs commit is included in the same PR as the feature. Reviewers can see bot
 **The run is NOT complete until every item below is checked. Do not declare done, do not stop, do not respond to the user with a summary until this checklist is fully verified.**
 
 ### Implementation
-- [ ] Phase 0: Story fetched, status set to `in_progress`, git worktree created
-- [ ] Phase 0.5: Failing tests written and confirmed RED
-- [ ] Phase 1: All tests passing GREEN
-- [ ] Phase 1.5: New pages reachable from the UI (not just by URL)
-- [ ] Phase 2: DHH review completed, "Rails-worthy" verdict received
-- [ ] Phase 2.5: E2E flows tested, documentation screenshots saved to `docs/src/assets/screenshots/<story-id>/`
-- [ ] Phase 3: `bin/rails test` passes, rubocop clean, brakeman clean
+- [ ] Phase 1: Story fetched, status set to `in_progress`, git worktree created
+- [ ] Phase 2: Failing tests written and confirmed RED
+- [ ] Phase 3: All tests passing GREEN
+- [ ] Phase 4: New pages reachable from the UI (not just by URL)
+- [ ] Phase 5: DHH review completed, "Rails-worthy" verdict received
+- [ ] Phase 6: E2E flows tested, documentation screenshots saved to `docs/src/assets/screenshots/<story-id>/`
+- [ ] Phase 7: `bin/rails test` passes, rubocop clean, brakeman clean
 
 ### Delivery
-- [ ] Phase 4: CHANGELOG updated, feature committed, PR created
-- [ ] Phase 4.5: `/update-docs` run (or confirmed no `docs/` site exists), screenshots embedded, `bun run build` passes, docs committed
-- [ ] Phase 4.5 final: SmartSuite updated to `ready_for_review` with PR link
+- [ ] Phase 8: CHANGELOG updated, feature committed, PR created
+- [ ] Phase 9: `/update-docs` run (or confirmed no `docs/` site exists), screenshots embedded, `bun run build` passes, docs committed
+- [ ] Phase 9 final: SmartSuite updated to `ready_for_review` with PR link
+- [ ] Phase 9 signal: autopilot state `phase` set to `complete` (step 7 in Phase 9)
 
 **If any item is unchecked, return to that phase and complete it before proceeding.**
 
