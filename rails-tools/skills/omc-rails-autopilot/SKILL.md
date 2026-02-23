@@ -239,7 +239,7 @@ All three gates must pass. If any fails, fix the issue and re-run.
    gh pr create --title "feat(STORY_ID): title" --body "..."
    ```
 
-4. **Update SmartSuite** to `ready_for_review` with PR link
+**Do NOT update SmartSuite yet.** That happens after Phase 4.5 documentation is complete.
 
 ## Phase 4.5: Documentation Update
 
@@ -272,7 +272,31 @@ Update the project's Astro Starlight docs site to reflect the new feature. Skip 
    git commit -m "docs(STORY_ID): update documentation with new feature"
    ```
 
+6. **Update SmartSuite to `ready_for_review`** with the PR link — this is the FINAL step of the entire run and only happens here, after documentation is complete.
+
 The docs commit is included in the same PR as the feature. Reviewers can see both the implementation and its documentation in a single review.
+
+---
+
+## ⛔ Mandatory Completion Checklist
+
+**The run is NOT complete until every item below is checked. Do not declare done, do not stop, do not respond to the user with a summary until this checklist is fully verified.**
+
+### Implementation
+- [ ] Phase 0: Story fetched, status set to `in_progress`, git worktree created
+- [ ] Phase 0.5: Failing tests written and confirmed RED
+- [ ] Phase 1: All tests passing GREEN
+- [ ] Phase 1.5: New pages reachable from the UI (not just by URL)
+- [ ] Phase 2: DHH review completed, "Rails-worthy" verdict received
+- [ ] Phase 2.5: E2E flows tested, documentation screenshots saved to `docs/src/assets/screenshots/<story-id>/`
+- [ ] Phase 3: `bin/rails test` passes, rubocop clean, brakeman clean
+
+### Delivery
+- [ ] Phase 4: CHANGELOG updated, feature committed, PR created
+- [ ] Phase 4.5: `/update-docs` run (or confirmed no `docs/` site exists), screenshots embedded, `bun run build` passes, docs committed
+- [ ] Phase 4.5 final: SmartSuite updated to `ready_for_review` with PR link
+
+**If any item is unchecked, return to that phase and complete it before proceeding.**
 
 ## Escalation
 
