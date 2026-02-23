@@ -126,6 +126,12 @@ Scaffolds an Astro Starlight documentation site inside a Rails application. Cove
 #### `/update-docs`
 Updates the Astro Starlight documentation site to reflect recent code changes. Detects changed files via git, maps code areas to doc files (using a project-local mapping if available), reads actual source for accuracy, and updates or creates MDX pages in Spanish. Verifies with `bun run build` before finishing.
 
+#### `/docs-audit`
+Identifies undocumented areas by comparing the Rails codebase to the existing docs site. Runs a script to inventory controllers, models, and routes, then cross-references with existing MDX pages to produce a prioritized gap report. Classifies gaps by business impact (end-user features first) and suggests which to address first.
+
+#### `/docs-review`
+Quality review of the existing documentation site. Checks each page for accuracy against the current source code, audience appropriateness (end-user vs. technical), MDX validity, and sidebar structure. Produces a report grouped by severity (critical, important, minor) and fixes or proposes fixes.
+
 ---
 
 ## Adding New Content
