@@ -40,6 +40,35 @@ Phase 9: Update documentation + SmartSuite -- sync docs site with new feature, i
 
 > **All 9 phases are required.** Before responding to the user, verify the **⛔ Mandatory Completion Checklist** at the bottom of this skill. The session cannot exit until Phase 9 is fully complete.
 
+### Phase Tracking
+
+After completing each phase, record it in the autopilot state file. This makes phase completion observable and prevents skipping.
+
+```bash
+node -e "
+  const fs = require('fs'), path = require('path');
+  const PHASE = Number(process.argv[1]);
+  const dir = '.omc/state', sessDir = path.join(dir, 'sessions');
+  function update(f) {
+    if (!fs.existsSync(f)) return false;
+    const s = JSON.parse(fs.readFileSync(f));
+    s.phases_completed = [...new Set([...(s.phases_completed || []), PHASE])];
+    s.phase = 'phase_' + PHASE;
+    fs.writeFileSync(f, JSON.stringify(s, null, 2));
+    return true;
+  }
+  let done = false;
+  if (fs.existsSync(sessDir)) {
+    for (const sid of fs.readdirSync(sessDir))
+      if (update(path.join(sessDir, sid, 'autopilot-state.json'))) done = true;
+  }
+  if (!done) update(path.join(dir, 'autopilot-state.json'));
+  console.log('Phase ' + PHASE + ' recorded.');
+" PHASE_NUMBER
+```
+
+**Run this after every phase**, replacing `PHASE_NUMBER` with 1-9. The pre-commit gate before Phase 8 will block if any phase was skipped.
+
 ## Prerequisites
 
 The project's CLAUDE.md must declare its SmartSuite project ID:
@@ -92,15 +121,15 @@ Delegate to OMC autopilot to implement minimum code making all tests pass. Exist
 
 ## Phase 4: UI Integration
 
-Ensure new functionality is reachable from the application UI -- do not leave features accessible only by typing URLs manually.
+**This phase always runs — even if no new pages were added.** Verify the new functionality is accessible from the application UI. Do not leave features accessible only by typing URLs manually.
 
-1. Check if the story adds new routes with user-facing pages (index, show, or dedicated views)
-2. If yes, find the project's navigation structure (sidebar partial, nav menu, parent show page) and add a link
-3. Gate visibility behind authorization (e.g., `policy(:resource).index?` or role checks consistent with the project's Pundit policies)
-4. For nested resources, link from the parent's show page rather than the global nav
+1. Identify what the story adds: new pages, new form fields, new UI controls, or new behavior on existing pages
+2. For new pages: find the project's navigation structure (sidebar partial, nav menu, parent show page) and add a link. For nested resources, link from the parent's show page rather than the global nav
+3. For existing pages with new functionality: verify the entry point is visible and discoverable (e.g., a new button, menu item, or section heading)
+4. Gate visibility behind authorization (e.g., `policy(:resource).index?` or role checks consistent with the project's Pundit policies)
 5. Run tests to confirm nothing broke
 
-**Exit criteria:** New pages are reachable from the UI without knowing the URL.
+**Exit criteria:** The feature is discoverable through normal UI navigation — not just by knowing the URL. Record phase 4 completion.
 
 ## Phase 5: Iterative AI Review (Refactor Phase)
 
@@ -121,7 +150,7 @@ After each feedback application, run tests to confirm GREEN state is maintained.
 
 ## Phase 6: Visual Verification
 
-Verify the feature works as a real user would experience it, then review and improve the visual quality of all new or modified interfaces. This phase combines E2E browser testing with UI quality review into a single visual pass.
+**This phase always runs.** Verify the feature works as a real user would experience it, then review and improve the visual quality of all new or modified interfaces. This phase combines E2E browser testing with UI quality review into a single visual pass. Do not skip this phase due to complexity — it catches real bugs and produces required documentation artifacts.
 
 See **`references/e2e-browser-testing.md`** for detailed patterns, authentication handling, and Turbo-specific guidance.
 
@@ -204,7 +233,7 @@ rm -rf tmp/screenshots/e2e-*.png
 
 Run tests to confirm GREEN state is maintained after UI improvements.
 
-**Exit criteria:** All E2E flows pass without errors, visual review approved, Bali components used consistently, tests green.
+**Exit criteria:** All E2E flows pass without errors, visual review approved, Bali components used consistently, tests green. Record phase 6 completion.
 
 ## Phase 7: Quality Gates
 
@@ -217,6 +246,43 @@ bin/brakeman --no-pager -q  # No security warnings
 ```
 
 All three gates must pass. If any fails, fix the issue and re-run.
+
+## Pre-Commit Verification Gate
+
+**STOP. Before proceeding to Phase 8, verify all prior phases completed.** Read the autopilot state file and check `phases_completed`:
+
+```bash
+node -e "
+  const fs = require('fs'), path = require('path');
+  const dir = '.omc/state', sessDir = path.join(dir, 'sessions');
+  const required = [1, 2, 3, 4, 5, 6, 7];
+  function check(f) {
+    if (!fs.existsSync(f)) return null;
+    return JSON.parse(fs.readFileSync(f)).phases_completed || [];
+  }
+  let completed = null;
+  if (fs.existsSync(sessDir)) {
+    for (const sid of fs.readdirSync(sessDir)) {
+      const r = check(path.join(sessDir, sid, 'autopilot-state.json'));
+      if (r) { completed = r; break; }
+    }
+  }
+  if (!completed) completed = check(path.join(dir, 'autopilot-state.json')) || [];
+  const missing = required.filter(p => !completed.includes(p));
+  if (missing.length > 0) {
+    console.log('BLOCKED: Missing phases: ' + missing.join(', '));
+    console.log('Return to the earliest missing phase and complete it.');
+    process.exit(1);
+  }
+  console.log('All phases 1-7 verified. Proceeding to commit.');
+"
+```
+
+If any phase is missing, **return to that phase and complete it**. Do not rationalize skipping.
+
+Additionally verify these artifacts:
+- **Phase 6 evidence:** `docs/src/assets/screenshots/<story-id>/` contains at least 2 screenshots (unless the project has no docs site)
+- **Phase 5 evidence:** DHH review received "Rails-worthy" verdict
 
 ## Phase 8: Commit & PR
 
