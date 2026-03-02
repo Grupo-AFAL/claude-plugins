@@ -2,6 +2,40 @@
 
 Comprehensive mapping of raw HTML patterns to Bali ViewComponent replacements, organized by priority. Use this reference when scanning views for audit opportunities.
 
+## HIGHEST Priority - Page Component Adoption
+
+These are the most impactful replacements. Views that manually combine PageHeader + Breadcrumb + layout divs should use the appropriate page component instead.
+
+### Full Page Layouts
+
+| Raw Pattern | Bali Component | Detection |
+|-------------|----------------|-----------|
+| Index view with manual PageHeader + actions + DataTable | `Bali::IndexPage::Component` | Grep for `PageHeader` in index views, or `<h1`/`<h2` + "New" link + table in same view |
+| Show view with manual PageHeader + back button + content | `Bali::ShowPage::Component` | Grep for `PageHeader` with `back:` in show views, or manual two-column layouts with sidebar |
+| New/edit view with manual PageHeader + back button + form | `Bali::FormPage::Component` | Grep for `PageHeader` in new/edit views, or `form_with` preceded by manual breadcrumbs |
+| Dashboard with manual stat cards grid + PageHeader | `Bali::DashboardPage::Component` | Grep for `StatCard` or stat-like cards in grid layouts with PageHeader |
+| Manual admin layout with sidebar + content area | `Bali::AppLayout::Component` | Grep for `SideMenu` wrapped in manual flex/grid layout divs |
+| Standalone `Bali::PageHeader` + manual breadcrumbs + divs | Use page component instead | Grep for `PageHeader::Component.new` in non-layout views -- most should be replaced by a page component |
+
+### Audit Grep Commands for Page Components
+
+```bash
+# Views using standalone PageHeader (candidates for page components)
+grep -rn "PageHeader::Component" app/views/ --include="*.erb" | grep -v "layouts/"
+
+# Manual breadcrumb + header combos
+grep -rn "Breadcrumb::Component" app/views/ --include="*.erb" | grep -v "layouts/"
+
+# Manual two-column layouts in show/edit views (candidates for ShowPage/FormPage sidebar)
+grep -rn "lg:grid-cols-3\|lg:grid-cols-\[2fr" app/views/ --include="*.erb"
+
+# Manual stat card grids (candidates for DashboardPage)
+grep -rn "StatCard::Component" app/views/ --include="*.erb"
+
+# Manual admin layouts (candidates for AppLayout)
+grep -rn "SideMenu::Component" app/views/layouts/ --include="*.erb" | grep -v "AppLayout"
+```
+
 ## HIGH Priority - Structural Replacements
 
 These patterns have the biggest impact on view consistency and maintainability.
@@ -10,13 +44,13 @@ These patterns have the biggest impact on view consistency and maintainability.
 
 | Raw HTML Pattern | Bali Component | Detection |
 |-----------------|----------------|-----------|
-| `<div class="flex justify-between">` with heading + buttons | `Bali::PageHeader::Component` | Grep for `<h1` or `<h2` adjacent to action buttons/links |
+| `<div class="flex justify-between">` with heading + buttons | Page component (IndexPage, ShowPage, etc.) or `Bali::PageHeader::Component` | Grep for `<h1` or `<h2` adjacent to action buttons/links |
 | `<nav class="navbar">` or custom header bars | `Bali::Navbar::Component` | Grep for `navbar` class or sticky nav elements |
 | `<div class="hero">` or large banner sections | `Bali::Hero::Component` | Grep for `hero` class |
 | `<footer>` with link columns | `Bali::Footer::Component` | Grep for `<footer` tags |
-| `<aside>` or sidebar navigation | `Bali::SideMenu::Component` | Grep for `<aside`, `sidebar`, `side-menu` classes |
+| `<aside>` or sidebar navigation | `Bali::SideMenu::Component` (inside `AppLayout`) | Grep for `<aside`, `sidebar`, `side-menu` classes |
 | `<div class="drawer">` or slide-out panels | `Bali::Drawer::Component` | Grep for `drawer` class |
-| Custom breadcrumb `<nav>` or `<ol>` trails | `Bali::Breadcrumb::Component` | Grep for `breadcrumb` class or `aria-label="breadcrumb"` |
+| Custom breadcrumb `<nav>` or `<ol>` trails | Page component (all include breadcrumbs) or `Bali::Breadcrumb::Component` | Grep for `breadcrumb` class or `aria-label="breadcrumb"` |
 
 ### Tables & Data
 

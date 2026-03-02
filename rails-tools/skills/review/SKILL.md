@@ -173,8 +173,10 @@ rm -f .omc/state/dhh-review-state.json
 - Responds to turbo_stream format
 
 ### Views/Components
-- Uses Bali ViewComponents for complex UI
-- DaisyUI semantic classes
+- Uses Bali page components for full page layouts (IndexPage, ShowPage, FormPage, DashboardPage)
+- Uses AppLayout in layout files for admin sidebar structure
+- Uses Bali ViewComponents for UI elements (Card, DataTable, etc.)
+- DaisyUI semantic classes via Bali (not raw HTML)
 - Proper Turbo Frame usage
 - No inline JavaScript
 - Accessible markup
