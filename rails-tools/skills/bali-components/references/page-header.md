@@ -84,6 +84,8 @@ Page title and subtitle section with optional back button. Provides consistent p
 
 ## Notes
 
+- **Used internally by page components.** DashboardPage, IndexPage, ShowPage, and FormPage all render PageHeader automatically. You rarely need to use PageHeader directly -- use the appropriate page component instead.
+- Standalone PageHeader is still useful in custom layouts or sections that don't fit a page component pattern
 - Uses `Bali::Level::Component` internally for layout
 - Default title uses `text-2xl` and subtitle uses `text-lg`
 - Title has bottom margin of `mb-1` for spacing from subtitle

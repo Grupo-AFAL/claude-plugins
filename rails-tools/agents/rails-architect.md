@@ -198,26 +198,72 @@ When designing for AFAL projects, use:
 
 ## UI Patterns
 
-When specifying UI, use:
+When specifying UI, use Bali ViewComponents -- never raw DaisyUI HTML.
 
-### DaisyUI Components
+### Page Components
+
+Every view should use the appropriate Bali page component for consistent structure:
 
 ```erb
-<button class="btn btn-primary">Save</button>
-<div class="card bg-base-100 shadow-xl">
-  <div class="card-body">Content</div>
-</div>
-<div class="modal">...</div>
+<%# Index views %>
+<%= render Bali::IndexPage::Component.new(title: "Orders", breadcrumbs: [...]) do |page| %>
+  <% page.with_action do %>
+    <%= render Bali::Link::Component.new(name: "New Order", href: new_order_path, variant: :primary, icon_name: "plus") %>
+  <% end %>
+  <% page.with_body do %>
+    <%= render Bali::DataTable::Component.new(items: @orders) do |table| %>
+      ...
+    <% end %>
+  <% end %>
+<% end %>
+
+<%# Show views %>
+<%= render Bali::ShowPage::Component.new(title: @order.reference, back: { href: orders_path }) do |page| %>
+  <% page.with_action do %>
+    <%= render Bali::Link::Component.new(name: "Edit", href: edit_order_path(@order), variant: :ghost, icon_name: "pencil") %>
+  <% end %>
+  <% page.with_body do %>
+    ...
+  <% end %>
+  <% page.with_sidebar do %>
+    ...
+  <% end %>
+<% end %>
+
+<%# New/Edit views %>
+<%= render Bali::FormPage::Component.new(title: "New Order", back: { href: orders_path }) do |page| %>
+  <% page.with_body do %>
+    <%= form_with model: @order, builder: Bali::FormBuilder do |f| %>
+      ...
+    <% end %>
+  <% end %>
+<% end %>
+
+<%# Dashboard views %>
+<%= render Bali::DashboardPage::Component.new(title: "Dashboard") do |page| %>
+  <% page.with_stat(label: "Total", value: "1,234", icon: "shopping-cart", color: :primary) %>
+  <% page.with_body do %>
+    ...
+  <% end %>
+<% end %>
 ```
 
-### ViewComponents
+### Admin Layout
 
-```ruby
-class CardComponent < ViewComponent::Base
-  def initialize(card:)
-    @card = card
-  end
-end
+Use `AppLayout` in layout files for sidebar-based admin interfaces:
+
+```erb
+<%# layouts/admin.html.erb %>
+<%= render Bali::AppLayout::Component.new(fixed_sidebar: true) do |layout| %>
+  <% layout.with_sidebar do %>
+    <%= render Bali::SideMenu::Component.new(current_path: request.path, collapsible: true) do |menu| %>
+      ...
+    <% end %>
+  <% end %>
+  <% layout.with_body do %>
+    <%= yield %>
+  <% end %>
+<% end %>
 ```
 
 ### Hotwire Patterns

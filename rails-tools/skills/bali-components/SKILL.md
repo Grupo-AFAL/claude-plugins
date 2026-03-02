@@ -1,6 +1,6 @@
 ---
 name: bali-components
-description: This skill should be used when the user asks to "build a view with Bali", "create a form", "add a card", "use ViewComponents", "add a modal", "add a table", "style with DaisyUI", "create a dashboard", "add navigation", "build a layout", "add a sidebar", "create filters", "add pagination", "upload a file", or mentions any Bali component by name (Card, Table, Modal, Tooltip, Avatar, Link, Tag, Tabs, Breadcrumb, Button, Drawer, Dropdown, FormBuilder, DataTable, Stepper, Timeline, Chart, GanttChart, Skeleton, Carousel, or other Bali ViewComponents).
+description: This skill should be used when the user asks to "build a view with Bali", "create a form", "add a card", "use ViewComponents", "add a modal", "add a table", "style with DaisyUI", "create a dashboard", "add navigation", "build a layout", "add a sidebar", "create filters", "add pagination", "upload a file", "create a page", "build an index page", "build a show page", "build a form page", "build a dashboard page", "set up app layout", or mentions any Bali component by name (Card, Table, Modal, Tooltip, Avatar, Link, Tag, Tabs, Breadcrumb, Button, Drawer, Dropdown, FormBuilder, DataTable, Stepper, Timeline, Chart, GanttChart, Skeleton, Carousel, DashboardPage, FormPage, IndexPage, ShowPage, AppLayout, PageHeader, or other Bali ViewComponents).
 ---
 
 # Bali ViewComponents
@@ -15,6 +15,9 @@ Bali is a Rails ViewComponent library built on DaisyUI/Tailwind with 50+ compone
 4. **Modal header takes `title:` keyword.** Use `modal.with_header(title: "Text")`, not a block.
 5. **Table has NO pagination slot.** Use Pagy separately after the table, or use DataTable which integrates pagination.
 6. **Link uses `variant:`, not `type:`.** The `type:` parameter is deprecated.
+7. **Use Page Components for full pages.** Every index, show, new/edit, and dashboard view should use the corresponding page component (IndexPage, ShowPage, FormPage, DashboardPage) instead of manually combining PageHeader + Breadcrumb + layout divs.
+8. **AppLayout goes in layout files only.** AppLayout wraps SideMenu + body for admin layouts. Individual views use page components inside the layout's `yield`.
+9. **FormPage slots must be in ERB, not Ruby.** Never extract FormPage slot content to Ruby methods -- slots must be evaluated in ERB template context.
 
 ## Common Mistakes
 
@@ -36,6 +39,9 @@ Bali is a Rails ViewComponent library built on DaisyUI/Tailwind with 50+ compone
 | `Notification` for inline | `Message` for inline | Notification = toast only |
 | `tabs.with_tab(name:)` | `tabs.with_tab(title:)` | Use `title:` not `name:` |
 | `breadcrumb.with_item(current:)` | `with_item(active:)` or omit `href:` | Use `active:` |
+| Manual PageHeader + Breadcrumb + divs | `Bali::IndexPage::Component` etc. | Use page components |
+| AppLayout in individual views | AppLayout in layout file only | Belongs in `layouts/` |
+| FormPage slot content in Ruby method | Inline in ERB template | Slots need ERB context |
 
 ## Button vs Link
 
@@ -49,6 +55,26 @@ Bali is a Rails ViewComponent library built on DaisyUI/Tailwind with 50+ compone
 ## Component Index
 
 Consult the appropriate reference file for detailed parameters, slots, and examples.
+
+### Page Components (Full Page Layouts)
+
+These components provide complete page structures. **Use them instead of manually combining PageHeader + Breadcrumb + layout divs.**
+
+- **`references/app-layout.md`** -- Admin layout with SideMenu + topbar + body (use in layout files)
+- **`references/dashboard-page.md`** -- Dashboard with stat cards grid, actions, and body content
+- **`references/index-page.md`** -- List/table page with header, actions, and body
+- **`references/show-page.md`** -- Detail page with title tags, actions, body, and optional sidebar
+- **`references/form-page.md`** -- New/edit page with back button, body, and optional sidebar
+
+**When to use which:**
+
+| View type | Component | Key features |
+|-----------|-----------|-------------|
+| `index.html.erb` | `IndexPage` | Title, actions (New button), body (DataTable) |
+| `show.html.erb` | `ShowPage` | Title + tags, actions (Edit/Delete), body + sidebar |
+| `new.html.erb` / `edit.html.erb` | `FormPage` | Title, back button, card-wrapped form + sidebar |
+| Dashboard views | `DashboardPage` | Title, stat cards, body for charts/cards |
+| `layouts/admin.html.erb` | `AppLayout` | SideMenu + topbar + yield |
 
 ### Forms
 - **`references/forms.md`** -- FormBuilder API, all field methods, SlimSelect, date pickers, dynamic nested fields, submit buttons

@@ -42,10 +42,15 @@ Consult **`references/patterns.md`** for the full anti-pattern list with grep co
 
 Scan for raw HTML that has a Bali component equivalent. Prioritize by impact:
 
-**HIGH priority** (structural -- fix first):
+**HIGHEST priority** (full page structure -- fix first):
+- Manual page layout (PageHeader + Breadcrumb + divs) -> `Bali::IndexPage::Component`, `Bali::ShowPage::Component`, `Bali::FormPage::Component`, or `Bali::DashboardPage::Component`
+- Manual admin layout (sidebar + content divs) -> `Bali::AppLayout::Component`
+- These page components handle breadcrumbs, headers, actions, and responsive layout automatically
+
+**HIGH priority** (structural):
 - `<table>` -> `Bali::Table::Component` or `Bali::DataTable::Component`
 - `<dl>` definition lists -> `Bali::PropertiesTable::Component`
-- Page headers (h1 + actions) -> `Bali::PageHeader::Component`
+- Standalone `PageHeader` + manual layout -> Use a page component instead
 - `form_with` without builder -> Add `Bali::FormBuilder`
 - `<div class="card">` -> `Bali::Card::Component`
 - `<div class="modal">` -> `Bali::Modal::Component`
