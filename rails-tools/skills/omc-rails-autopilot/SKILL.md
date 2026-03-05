@@ -36,9 +36,10 @@ Phase 6: Visual Verification -- E2E browser flows + documentation screenshots + 
 Phase 7: Quality gates (tests, rubocop, brakeman)
 Phase 8: Update CHANGELOG, commit, create PR
 Phase 9: Update documentation + SmartSuite -- sync docs site with new feature, include screenshots
+Phase 10: Final DHH review -- full codebase review of ALL changes on the branch
 ```
 
-> **All 9 phases are required.** Before responding to the user, verify the **⛔ Mandatory Completion Checklist** at the bottom of this skill. The session cannot exit until Phase 9 is fully complete.
+> **All 10 phases are required.** Before responding to the user, verify the **⛔ Mandatory Completion Checklist** at the bottom of this skill. The session cannot exit until Phase 10 is fully complete.
 
 ### Phase Tracking
 
@@ -67,7 +68,7 @@ node -e "
 " PHASE_NUMBER
 ```
 
-**Run this after every phase**, replacing `PHASE_NUMBER` with 1-9. The pre-commit gate before Phase 8 will block if any phase was skipped.
+**Run this after every phase**, replacing `PHASE_NUMBER` with 1-10. The pre-commit gate before Phase 8 will block if any phase was skipped.
 
 ## Prerequisites
 
@@ -342,7 +343,34 @@ Update the project's Astro Starlight docs site to reflect the new feature, then 
 
 6. **Update SmartSuite to `ready_for_review`** with the PR link.
 
-7. **Mark autopilot complete** — signal the stop hook that all phases are done:
+The docs commit is included in the same PR as the feature. Reviewers can see both the implementation and its documentation in a single review.
+
+## Phase 10: Final DHH Review
+
+**This phase always runs.** Run a final comprehensive DHH review of ALL changes on the branch — implementation, tests, views, docs, and any code touched during the workflow. This catches issues introduced during later phases (UI integration, visual fixes, documentation) that were not covered by the Phase 5 review.
+
+1. **Gather the full diff** of the branch against `main`:
+   ```bash
+   git diff main...HEAD --name-only
+   ```
+
+2. **Invoke the `dhh-code-reviewer` agent** with the full branch diff. The reviewer must evaluate ALL changed files, not just the implementation from Phase 3.
+
+3. **Auto-apply all feedback** — fix every issue the reviewer identifies. Run tests after each round of fixes:
+   ```bash
+   bin/rails test
+   ```
+
+4. **Iterate until approved** — continue review/fix cycles until the reviewer gives a "Rails-worthy" verdict. Maximum 3 passes at this stage (code should already be close from Phase 5).
+
+5. **Commit fixes** if any were needed:
+   ```bash
+   git add -A
+   git commit -m "refactor(STORY_ID): apply final DHH review feedback"
+   git push
+   ```
+
+6. **Mark autopilot complete** — signal the stop hook that all phases are done:
    ```bash
    node -e "
      const { readdirSync, readFileSync, writeFileSync, existsSync } = require('fs');
@@ -374,7 +402,7 @@ Update the project's Astro Starlight docs site to reflect the new feature, then 
    ```
    This allows the session to exit cleanly. Do not skip this step.
 
-The docs commit is included in the same PR as the feature. Reviewers can see both the implementation and its documentation in a single review.
+**Exit criteria:** Final DHH review approved with "Rails-worthy" verdict across ALL branch changes. Record phase 10 completion.
 
 ---
 
@@ -395,7 +423,8 @@ The docs commit is included in the same PR as the feature. Reviewers can see bot
 - [ ] Phase 8: CHANGELOG updated, feature committed, PR created
 - [ ] Phase 9: `/update-docs` run (or confirmed no `docs/` site exists), screenshots embedded, `bun run build` passes, docs committed
 - [ ] Phase 9 final: SmartSuite updated to `ready_for_review` with PR link
-- [ ] Phase 9 signal: autopilot state `phase` set to `complete` (step 7 in Phase 9)
+- [ ] Phase 10: Final DHH review of ALL branch changes received "Rails-worthy" verdict
+- [ ] Phase 10 signal: autopilot state `phase` set to `complete` (step 6 in Phase 10)
 
 **If any item is unchecked, return to that phase and complete it before proceeding.**
 
