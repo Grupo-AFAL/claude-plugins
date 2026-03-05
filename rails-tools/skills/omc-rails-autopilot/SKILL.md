@@ -345,9 +345,42 @@ Update the project's Astro Starlight docs site to reflect the new feature, then 
 
 The docs commit is included in the same PR as the feature. Reviewers can see both the implementation and its documentation in a single review.
 
+## Pre-Completion Verification Gate
+
+**STOP. Before proceeding to Phase 10, verify all prior phases completed.** This is the same pattern as the Pre-Commit Verification Gate but covers phases 8-9.
+
+```bash
+node -e "
+  const fs = require('fs'), path = require('path');
+  const dir = '.omc/state', sessDir = path.join(dir, 'sessions');
+  const required = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  function check(f) {
+    if (!fs.existsSync(f)) return null;
+    return JSON.parse(fs.readFileSync(f)).phases_completed || [];
+  }
+  let completed = null;
+  if (fs.existsSync(sessDir)) {
+    for (const sid of fs.readdirSync(sessDir)) {
+      const r = check(path.join(sessDir, sid, 'autopilot-state.json'));
+      if (r) { completed = r; break; }
+    }
+  }
+  if (!completed) completed = check(path.join(dir, 'autopilot-state.json')) || [];
+  const missing = required.filter(p => !completed.includes(p));
+  if (missing.length > 0) {
+    console.log('BLOCKED: Missing phases: ' + missing.join(', '));
+    console.log('Return to the earliest missing phase and complete it.');
+    process.exit(1);
+  }
+  console.log('All phases 1-9 verified. Proceeding to final DHH review.');
+"
+```
+
+If any phase is missing, **return to that phase and complete it**. Do not skip Phase 10.
+
 ## Phase 10: Final DHH Review
 
-**This phase always runs.** Run a final comprehensive DHH review of ALL changes on the branch — implementation, tests, views, docs, and any code touched during the workflow. This catches issues introduced during later phases (UI integration, visual fixes, documentation) that were not covered by the Phase 5 review.
+**This phase always runs. It is NOT optional.** Run a final comprehensive DHH review of ALL changes on the branch — implementation, tests, views, docs, and any code touched during the workflow. This catches issues introduced during later phases (UI integration, visual fixes, documentation) that were not covered by the Phase 5 review.
 
 1. **Gather the full diff** of the branch against `main`:
    ```bash
@@ -370,34 +403,42 @@ The docs commit is included in the same PR as the feature. Reviewers can see bot
    git push
    ```
 
-6. **Mark autopilot complete** — signal the stop hook that all phases are done:
+6. **Mark autopilot complete** — signal the stop hook that all phases are done. This script verifies all 10 phases are recorded before allowing completion:
    ```bash
    node -e "
      const { readdirSync, readFileSync, writeFileSync, existsSync } = require('fs');
      const { join } = require('path');
      const stateDir = '.omc/state';
-     // Session-scoped paths
+     const required = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
      const sessDir = join(stateDir, 'sessions');
-     let updated = false;
-     if (existsSync(sessDir)) {
-       for (const sid of readdirSync(sessDir)) {
-         const p = join(sessDir, sid, 'autopilot-state.json');
-         if (existsSync(p)) {
-           const s = JSON.parse(readFileSync(p));
-           s.phase = 'complete';
-           writeFileSync(p, JSON.stringify(s, null, 2));
-           updated = true;
+
+     function findState() {
+       if (existsSync(sessDir)) {
+         for (const sid of readdirSync(sessDir)) {
+           const p = join(sessDir, sid, 'autopilot-state.json');
+           if (existsSync(p)) return p;
          }
        }
+       const legacy = join(stateDir, 'autopilot-state.json');
+       return existsSync(legacy) ? legacy : null;
      }
-     // Legacy fallback
-     const legacy = join(stateDir, 'autopilot-state.json');
-     if (!updated && existsSync(legacy)) {
-       const s = JSON.parse(readFileSync(legacy));
-       s.phase = 'complete';
-       writeFileSync(legacy, JSON.stringify(s, null, 2));
+
+     const statePath = findState();
+     if (!statePath) { console.log('No autopilot state file found.'); process.exit(1); }
+
+     const s = JSON.parse(readFileSync(statePath));
+     const completed = s.phases_completed || [];
+     const missing = required.filter(p => !completed.includes(p));
+
+     if (missing.length > 0) {
+       console.log('BLOCKED: Cannot mark complete. Missing phases: ' + missing.join(', '));
+       console.log('Return to the earliest missing phase and complete it.');
+       process.exit(1);
      }
-     console.log('Autopilot phase set to complete.');
+
+     s.phase = 'complete';
+     writeFileSync(statePath, JSON.stringify(s, null, 2));
+     console.log('All 10 phases verified. Autopilot phase set to complete.');
    "
    ```
    This allows the session to exit cleanly. Do not skip this step.
