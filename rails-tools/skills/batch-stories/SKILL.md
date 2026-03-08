@@ -1,12 +1,12 @@
 ---
 name: batch-stories
-description: This skill should be used when the user asks to "implement multiple stories", "batch stories", "run autopilot on several stories", "implement these stories", "batch autopilot", "run stories in parallel", "implement 5 stories", or wants to run the autopilot workflow on more than one SmartSuite story. Orchestrates parallel story implementation using isolated git worktrees with post-implementation quality passes.
+description: This skill should be used when the user asks to "implement multiple stories", "batch stories", "run autopilot on several stories", "implement these stories", "batch autopilot", "run stories in parallel", "implement 5 stories", or wants to run the autopilot workflow on more than one SmartSuite story. Orchestrates parallel story implementation using Claude Code teams with post-implementation quality passes.
 argument-hint: "[story-codes...]"
 ---
 
 # Batch Stories - Parallel Autonomous Implementation
 
-Implement multiple SmartSuite stories in parallel, each in an isolated git worktree with its own branch and PR. Each story runs the full `/omc-rails-autopilot` workflow independently.
+Implement multiple SmartSuite stories in parallel using Claude Code native teams. Each team member is a full Claude Code session that runs the complete `/omc-rails-autopilot` workflow independently — all hooks, skills, MCP tools, and enforcement mechanisms work identically to a direct user invocation.
 
 ## Usage
 
@@ -38,37 +38,97 @@ Stories to implement:
   3. GC-FND-003-US01 - Role management
 ```
 
-### Step 2: Launch Parallel Agents
+### Step 2: Create Team and Tasks
 
-For each story, spawn an agent using the Agent tool **without** `isolation: worktree`. The autopilot's Phase 1 creates the worktree in a persistent location (`.worktrees/feature/STORY-ID`) that survives sandbox termination and remains accessible for manual testing:
-
-```
-Agent(
-  description: "Autopilot: GC-FND-002-US01",
-  prompt: "Run /omc-rails-autopilot GC-FND-002-US01 — complete all 10 phases autonomously. Work inside the worktree created by Phase 1.",
-  run_in_background: true
-)
-```
-
-**Do NOT use `isolation: worktree`** — it creates worktrees in sandbox-managed locations (`/private/tmp/`) that are lost when the sandbox closes and cannot be accessed for manual testing.
-
-Launch ALL agents in a single message so they run concurrently. Each agent:
-- Invokes `/omc-rails-autopilot` which enforces all 10 phases
-- Creates its own git worktree via Phase 1 (at `.worktrees/feature/STORY-ID`)
-- Runs the full 10-phase autopilot workflow inside that worktree
-- Creates its own branch and PR
-- Updates SmartSuite status independently
-- Leaves the worktree intact for manual testing and further changes
-
-### Step 3: Monitor Progress
-
-After launching, use `/loop` to monitor progress:
+Create a team and one task per story. Skip the team-plan/team-prd stages — each story is a self-contained unit that runs its own 10-phase pipeline internally.
 
 ```
-/loop 15m check the status of all batch-stories agents and report: which are still running, which completed, and any that failed
+TeamCreate(team_name: "batch-stories-YYYYMMDD-HHMM")
+
+For each story:
+  TaskCreate(
+    subject: "GC-FND-002-US01 - User registration flow",
+    description: "Run /omc-rails-autopilot GC-FND-002-US01. Complete all 10 phases autonomously."
+  )
+  TaskUpdate(taskId: "N", owner: "story-worker-N")
 ```
 
-Report a summary table as agents complete:
+### Step 3: Spawn Team Members
+
+Spawn one team member per story. Each member is a full Claude Code session with access to all installed plugins, skills, MCP servers, and hooks — the autopilot behaves exactly as when run directly.
+
+```
+For each story, spawn in parallel:
+  Task(
+    subagent_type: "oh-my-claudecode:deep-executor",
+    team_name: "batch-stories-YYYYMMDD-HHMM",
+    name: "story-worker-1",
+    prompt: "<WORKER_PREAMBLE>"
+  )
+```
+
+Use `deep-executor` (Opus) because each worker runs the full 10-phase autopilot which requires strong reasoning for architecture, TDD, and iterative DHH reviews.
+
+**Spawn ALL team members in a single message** so they start concurrently.
+
+#### Worker Preamble
+
+Each worker receives this preamble customized with their story code and task ID:
+
+```
+You are a TEAM WORKER in team "{team_name}". Your name is "{worker_name}".
+You report to the team lead ("team-lead").
+
+== YOUR TASK ==
+
+Run /omc-rails-autopilot {STORY_CODE} and complete ALL 10 phases:
+- Phase 1: Story setup + worktree creation
+- Phase 2: TDD red phase (write failing tests)
+- Phase 3: Implementation (make tests pass) + early push
+- Phase 4: UI integration (pages reachable from navigation)
+- Phase 5: Iterative DHH review (until "Rails-worthy")
+- Phase 6: Visual verification (E2E browser flows + screenshots)
+- Phase 7: Quality gates (tests, rubocop, brakeman)
+- Phase 8: CHANGELOG + commit + PR
+- Phase 9: Documentation + SmartSuite update
+- Phase 10: Final DHH review of ALL branch changes
+
+Every phase is mandatory. Do NOT skip any phase. Do NOT declare done until Phase 10 is complete.
+
+== WORK PROTOCOL ==
+
+1. CLAIM: Call TaskUpdate to set your task to in_progress:
+   {"taskId": "{TASK_ID}", "status": "in_progress", "owner": "{worker_name}"}
+
+2. WORK: Invoke /omc-rails-autopilot {STORY_CODE} and let it run all 10 phases.
+   You ARE allowed to invoke skills and spawn sub-agents (dhh-code-reviewer, etc.).
+
+3. COMPLETE: When all 10 phases are done, mark the task completed:
+   {"taskId": "{TASK_ID}", "status": "completed"}
+
+4. REPORT: Notify the lead via SendMessage:
+   {"type": "message", "recipient": "team-lead",
+    "content": "Completed {STORY_CODE}: PR #XX, all 10 phases done, tests green.",
+    "summary": "{STORY_CODE} complete"}
+
+== ERRORS ==
+If you cannot complete the story, report the failure to the lead:
+{"type": "message", "recipient": "team-lead",
+ "content": "FAILED {STORY_CODE}: <reason>", "summary": "{STORY_CODE} failed"}
+
+== SHUTDOWN ==
+When you receive a shutdown_request, respond with:
+{"type": "shutdown_response", "request_id": "<from the request>", "approve": true}
+```
+
+### Step 4: Monitor Progress
+
+The lead monitors via two channels:
+
+1. **Inbound messages** — team members send `SendMessage` when they complete or fail. These arrive automatically.
+2. **TaskList polling** — periodically check overall progress.
+
+Report a summary table as members complete:
 
 ```
 Batch Progress:
@@ -79,9 +139,18 @@ Batch Progress:
   | GC-FND-003-US01 | Complete | feature/GC-FND-003-US01 | #43 |
 ```
 
-### Step 4: Post-Batch Quality Pass (Optional)
+### Step 5: Shutdown and Cleanup
 
-After all stories complete, run a forked quality review on each PR:
+When all tasks are completed or failed:
+
+1. Send `shutdown_request` to each team member
+2. Wait for `shutdown_response` from each (30s timeout)
+3. Call `TeamDelete` to clean up team and task files
+4. Report final summary to user
+
+### Step 6: Post-Batch Quality Pass (Optional)
+
+After all stories complete, offer to run a forked quality review on each PR:
 
 ```
 For each completed PR:
@@ -117,9 +186,9 @@ After the batch completes, each story's worktree persists at `.worktrees/feature
 
 ## Limitations
 
-- **Resource intensive:** Each parallel agent consumes its own context window and API tokens. Limit to 3-5 concurrent stories for best results.
+- **Resource intensive:** Each team member is a full Claude Code session consuming its own context window and API tokens. Limit to 3-5 concurrent stories for best results.
 - **Database contention:** All worktrees share the same development database. Stories that modify the same tables may conflict during migrations. Run `bin/rails db:migrate` in each worktree if needed.
-- **Session-scoped:** The batch and monitoring loop only run while Claude Code is open. If the session ends, in-progress agents may be interrupted. Completed work is preserved on the remote (branches and PRs) thanks to the early push in Phase 3.
+- **Session-scoped:** The team and monitoring loop only run while Claude Code is open. If the session ends, in-progress members may be interrupted. Completed work is preserved on the remote (branches and PRs) thanks to the early push in Phase 3.
 
 ## Integration
 

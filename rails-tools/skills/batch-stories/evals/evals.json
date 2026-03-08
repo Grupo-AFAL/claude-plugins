@@ -4,18 +4,22 @@
     {
       "id": 1,
       "prompt": "Implement these stories: GC-DOC-US031 GC-DOC-US019 GC-DOC-US020",
-      "expected_output": "Parallel autonomous implementation of all 3 stories, each in an isolated worktree with its own branch and PR, with post-batch quality review",
+      "expected_output": "Parallel autonomous implementation of all 3 stories using Claude Code teams, each in an isolated worktree with its own branch and PR",
       "expectations": [
         "The skill validates each story code exists in SmartSuite before launching",
         "The skill reports the list of stories that will be implemented with their titles",
-        "The skill launches one Agent per story without isolation: worktree (autopilot Phase 1 creates the worktree at .worktrees/feature/STORY-ID)",
-        "All agents are launched in a single message (parallel, not sequential)",
-        "Each agent receives a prompt that invokes /omc-rails-autopilot with the story code",
-        "Each agent runs with run_in_background: true",
-        "The skill sets up a monitoring loop after launching agents",
+        "The skill creates a team with TeamCreate",
+        "The skill creates one task per story with TaskCreate",
+        "The skill pre-assigns task owners before spawning workers",
+        "The skill spawns one team member per story using deep-executor subagent type",
+        "All team members are spawned in a single message (parallel, not sequential)",
+        "Each worker's preamble lists all 10 mandatory phases",
+        "Each worker's preamble tells them to invoke /omc-rails-autopilot with the story code",
+        "Each worker's preamble allows skill invocation and sub-agent spawning",
+        "The skill monitors progress via TaskList and inbound messages",
         "The skill reports a progress summary table showing story, status, branch, and PR columns",
-        "Each completed story results in a separate git branch (not all changes on one branch)",
-        "Each completed story results in a separate PR",
+        "Each completed story results in a separate git branch and PR",
+        "The skill performs graceful team shutdown when all stories complete",
         "The skill offers to run a post-batch quality pass (/dhh-review and /bali-view-audit) on completed PRs",
         "SmartSuite story statuses are updated during execution"
       ]
@@ -23,23 +27,23 @@
     {
       "id": 2,
       "prompt": "Batch autopilot next 3",
-      "expected_output": "Fetches 3 stories from SmartSuite backlog and launches parallel agents in isolated worktrees",
+      "expected_output": "Fetches 3 stories from SmartSuite backlog and launches a team with one member per story",
       "expectations": [
         "The skill queries SmartSuite for the top 3 backlog stories scoped to the current project",
         "The skill reports which stories were found with their codes and titles before launching",
-        "The skill launches 3 parallel agents (each creates its worktree via autopilot Phase 1)",
-        "Each agent runs the full omc-rails-autopilot workflow independently",
-        "The skill does not launch agents for stories that are not in backlog status"
+        "The skill creates a team and spawns 3 members (one per story)",
+        "Each member runs the full omc-rails-autopilot workflow independently",
+        "The skill does not launch members for stories that are not in backlog status"
       ]
     },
     {
       "id": 3,
       "prompt": "Implement these stories and let me review them tomorrow: GC-DOC-US031 GC-DOC-US019 GC-DOC-US020",
-      "expected_output": "Launches 3 parallel agents with monitoring, designed for overnight autonomous execution",
+      "expected_output": "Launches a team with 3 members for overnight autonomous execution",
       "expectations": [
-        "The skill launches all 3 agents in parallel (single message, not sequential)",
-        "Each agent creates its own worktree via autopilot Phase 1 at .worktrees/feature/STORY-ID",
-        "The skill sets up a monitoring loop to track progress across all 3 stories",
+        "The skill creates a team and spawns all 3 members in parallel",
+        "Each member creates its own worktree via autopilot Phase 1 at .worktrees/feature/STORY-ID",
+        "The skill monitors progress and reports as members complete",
         "The batch continues running without requiring user interaction",
         "Each story produces an independent PR that can be reviewed separately"
       ]
