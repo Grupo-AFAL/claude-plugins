@@ -1,6 +1,10 @@
 ---
 name: rails-conventions
 description: This skill should be used when the user asks to review code for Rails conventions, check if code follows the Rails way, perform a code review with DHH-style principles, evaluate if code is Rails-worthy, refactor to Rails conventions, clean up controllers or models, or ensure adherence to the Rails Doctrine.
+allowed-tools:
+  - Read
+  - Glob
+  - Grep
 ---
 
 # Rails Conventions - DHH-Style Code Review

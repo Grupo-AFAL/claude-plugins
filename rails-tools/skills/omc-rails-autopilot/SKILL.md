@@ -1,6 +1,8 @@
 ---
 name: omc-rails-autopilot
 description: This skill should be used when the user asks to "start autopilot", "implement a story", "work on a SmartSuite story", "autonomous Rails development", "autopilot next story", or invokes /omc-rails-autopilot with a story ID or "next". Combines OMC orchestration with TDD, iterative AI reviews, and SmartSuite tracking.
+argument-hint: "[story-code|next]"
+disable-model-invocation: true
 ---
 
 # OMC Rails Autopilot

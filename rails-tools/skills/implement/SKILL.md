@@ -1,6 +1,7 @@
 ---
 name: implement
 description: This skill should be used when the user asks to "implement a spec", "implement from spec", "build from architecture", "execute the plan", "implement feature from", "build from spec", "execute spec", "start building from the plan", "implement the architecture", "code the spec", or invokes /implement with a path to an approved architecture specification. Follows a structured phase-based approach with verification and DHH code review.
+argument-hint: "[path-to-spec]"
 ---
 
 # Implement Feature from Specification

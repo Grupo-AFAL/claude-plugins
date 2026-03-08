@@ -1,6 +1,10 @@
 ---
 name: hotwire-patterns
 description: This skill should be used when the user asks to add Turbo Frames, use Turbo Streams, create a Stimulus controller, make something interactive with Hotwire, add real-time updates, implement lazy loading, add inline editing, use Hotwire features, or asks when to use Turbo Frame vs Turbo Stream vs Stimulus vs React.
+allowed-tools:
+  - Read
+  - Glob
+  - Grep
 ---
 
 # Hotwire Patterns for AFAL Rails Apps

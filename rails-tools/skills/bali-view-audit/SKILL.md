@@ -1,6 +1,7 @@
 ---
 name: bali-view-audit
 description: This skill should be used when the user asks to "audit views for Bali components", "find raw HTML to replace with ViewComponents", "review views for component adoption", "check view component coverage", "find missing Bali components", "migrate views to Bali", or mentions auditing, reviewing, or scanning Rails views for Bali/ViewComponent opportunities.
+context: fork
 ---
 
 # Bali View Audit
