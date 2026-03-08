@@ -39,28 +39,38 @@ Stories to implement:
   3. GC-FND-003-US01 - Role management
 ```
 
-### Step 2: Launch Parallel Agents
+### Step 2: Load Autopilot Instructions
+
+Before spawning agents, locate the autopilot skill file. Subagents cannot invoke skills with `disable-model-invocation`, so each agent must read the skill file directly:
+
+1. Find the skill file: `Glob("**/omc-rails-autopilot/SKILL.md", path: "~/.claude/plugins/")`
+2. Note the resolved path (e.g., `~/.claude/plugins/cache/afal-plugins/rails-tools/2.14.1/skills/omc-rails-autopilot/SKILL.md`)
+
+### Step 3: Launch Parallel Agents
 
 For each story, spawn an agent using the Agent tool **without** `isolation: worktree`. The autopilot's Phase 1 creates the worktree in a persistent location (`.worktrees/feature/STORY-ID`) that survives sandbox termination and remains accessible for manual testing:
 
 ```
 Agent(
   description: "Autopilot: GC-FND-002-US01",
-  prompt: "Run /omc-rails-autopilot GC-FND-002-US01 — complete all 10 phases autonomously. Work inside the worktree created by Phase 1.",
+  prompt: "Read the omc-rails-autopilot skill at <RESOLVED_SKILL_PATH> and its references/ directory. Then follow the complete 10-phase workflow for story GC-FND-002-US01. Complete all phases autonomously. Do NOT try to invoke /omc-rails-autopilot — read and follow the instructions directly. Work inside the worktree created by Phase 1.",
   run_in_background: true
 )
 ```
 
 **Do NOT use `isolation: worktree`** — it creates worktrees in sandbox-managed locations (`/private/tmp/`) that are lost when the sandbox closes and cannot be accessed for manual testing.
 
+**Do NOT tell agents to invoke `/omc-rails-autopilot`** — skills with `disable-model-invocation` cannot be invoked by subagents. Pass the resolved file path instead.
+
 Launch ALL agents in a single message so they run concurrently. Each agent:
+- Reads the autopilot SKILL.md and follows it directly
 - Creates its own git worktree via Phase 1 (at `.worktrees/feature/STORY-ID`)
 - Runs the full 10-phase autopilot workflow inside that worktree
 - Creates its own branch and PR
 - Updates SmartSuite status independently
 - Leaves the worktree intact for manual testing and further changes
 
-### Step 3: Monitor Progress
+### Step 4: Monitor Progress
 
 After launching, use `/loop` to monitor progress:
 
@@ -79,7 +89,7 @@ Batch Progress:
   | GC-FND-003-US01 | Complete | feature/GC-FND-003-US01 | #43 |
 ```
 
-### Step 4: Post-Batch Quality Pass (Optional)
+### Step 5: Post-Batch Quality Pass (Optional)
 
 After all stories complete, run a forked quality review on each PR:
 
