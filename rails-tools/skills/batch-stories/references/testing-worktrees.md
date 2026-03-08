@@ -11,8 +11,8 @@ git worktree list
 Output:
 ```
 /Users/you/code/afal/project           abc1234 [main]
-/Users/you/code/afal/worktrees/feature/GC-FND-002-US01  def5678 [feature/GC-FND-002-US01]
-/Users/you/code/afal/worktrees/feature/GC-FND-002-US02  ghi9012 [feature/GC-FND-002-US02]
+/Users/you/code/afal/worktrees/gobierno-corporativo/feature/GC-FND-002-US01  def5678 [feature/GC-FND-002-US01]
+/Users/you/code/afal/worktrees/gobierno-corporativo/feature/GC-FND-002-US02  ghi9012 [feature/GC-FND-002-US02]
 ```
 
 ## Option A: Test Directly in the Worktree (Recommended)
@@ -21,7 +21,7 @@ Navigate to the worktree directory — a full copy of the repo with its own bran
 
 ```bash
 # Go to the story's worktree
-cd ../worktrees/feature/GC-FND-002-US01
+cd ../worktrees/$PROJECT_NAME/feature/GC-FND-002-US01
 
 # Install dependencies (if needed)
 bundle install
@@ -42,10 +42,10 @@ Each worktree is independent — run multiple servers on different ports to test
 
 ```bash
 # Terminal 1: Story US01 on port 3001
-cd ../worktrees/feature/GC-FND-002-US01 && bin/rails server -p 3001
+cd ../worktrees/$PROJECT_NAME/feature/GC-FND-002-US01 && bin/rails server -p 3001
 
 # Terminal 2: Story US02 on port 3002
-cd ../worktrees/feature/GC-FND-002-US02 && bin/rails server -p 3002
+cd ../worktrees/$PROJECT_NAME/feature/GC-FND-002-US02 && bin/rails server -p 3002
 ```
 
 ## Option B: Continue Working in the Worktree
@@ -53,7 +53,7 @@ cd ../worktrees/feature/GC-FND-002-US02 && bin/rails server -p 3002
 After manual testing, make additional changes directly in the worktree. The worktree is a full repo checkout — edit files, run tests, commit, and push as normal:
 
 ```bash
-cd ../worktrees/feature/GC-FND-002-US01
+cd ../worktrees/$PROJECT_NAME/feature/GC-FND-002-US01
 
 # Make fixes based on manual testing
 # ... edit files ...
@@ -67,7 +67,7 @@ git push
 To re-run a review or later autopilot phases from the worktree:
 
 ```bash
-cd ../worktrees/feature/GC-FND-002-US01
+cd ../worktrees/$PROJECT_NAME/feature/GC-FND-002-US01
 claude -p "/omc-rails-autopilot GC-FND-002-US01"
 ```
 
@@ -110,7 +110,7 @@ After testing and merging PRs, clean up the worktrees:
 
 ```bash
 # Remove a specific worktree
-git worktree remove ../worktrees/feature/GC-FND-002-US01
+git worktree remove ../worktrees/$PROJECT_NAME/feature/GC-FND-002-US01
 
 # Remove all batch worktrees at once
 git worktree list | grep worktrees/feature | awk '{print $1}' | xargs -I{} git worktree remove {}

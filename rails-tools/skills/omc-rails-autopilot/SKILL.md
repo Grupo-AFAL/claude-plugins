@@ -93,9 +93,10 @@ If a story code is provided (e.g., `GC-FND-002-US01`):
 3. Verify the story belongs to this project (matching `necesidad_software`) -- warn if mismatched
 4. Validate status is `backlog` -- stop if not
 5. Update status to `in_progress` and set `branch_name`
-6. Create git worktree for isolation:
+6. Create git worktree for isolation, namespaced by project to avoid clashes across repos:
    ```bash
-   git worktree add ../worktrees/feature/GC-FND-002-US01
+   PROJECT_NAME=$(basename "$PWD")
+   git worktree add ../worktrees/$PROJECT_NAME/feature/GC-FND-002-US01
    ```
 7. Generate `.claude/TASK.md` with story details in the worktree
 
