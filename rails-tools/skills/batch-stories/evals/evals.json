@@ -1,0 +1,29 @@
+{
+  "skill_name": "batch-stories",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Implement these stories: GC-FND-002-US01 GC-FND-002-US02",
+      "expected_output": "Parallel agent launches with isolated worktrees, one per story",
+      "expectations": [
+        "The skill validates story codes exist in SmartSuite before launching",
+        "The skill reports the list of stories that will be implemented",
+        "The skill launches one Agent per story with isolation: worktree",
+        "All agents are launched in a single message (parallel, not sequential)",
+        "Each agent runs with run_in_background: true",
+        "The skill sets up a monitoring loop using /loop after launching agents",
+        "The skill reports a progress summary table as agents complete"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Batch autopilot next 3",
+      "expected_output": "Fetches 3 stories from SmartSuite backlog and launches parallel agents",
+      "expectations": [
+        "The skill queries SmartSuite for the top 3 backlog stories",
+        "The skill reports which stories were found before launching",
+        "The skill launches parallel agents in isolated worktrees"
+      ]
+    }
+  ]
+}

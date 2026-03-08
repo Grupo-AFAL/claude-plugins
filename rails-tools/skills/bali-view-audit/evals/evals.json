@@ -1,0 +1,31 @@
+{
+  "skill_name": "bali-view-audit",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Audit views for Bali components",
+      "expected_output": "A systematic audit report identifying raw HTML that could be replaced with Bali ViewComponents, with verified API suggestions",
+      "expectations": [
+        "The audit scans app/views/ and app/components/ directories",
+        "The audit checks for anti-patterns in existing Bali component usage",
+        "The audit identifies raw HTML tables that could use Bali::Table::Component or Bali::DataTable::Component",
+        "The audit identifies manual page layouts that could use Bali page components (IndexPage, ShowPage, FormPage, DashboardPage)",
+        "The audit verifies component APIs before suggesting replacements (invokes bali-components skill or reads component source)",
+        "The audit prioritizes findings by impact level (HIGH for structural, MEDIUM for patterns, LOW for specialized)",
+        "The audit does NOT suggest wrong slot names (e.g., does not suggest with_body for Card or with_footer for Modal)",
+        "The audit runs in a forked context (isolated from conversation history)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Find raw HTML to replace with ViewComponents in app/views/admin/",
+      "expected_output": "A scoped audit of the admin views directory",
+      "expectations": [
+        "The audit scopes to app/views/admin/ only",
+        "The audit identifies forms missing Bali::FormBuilder",
+        "The audit identifies raw HTML that has Bali component equivalents",
+        "Each suggestion includes the current code and the proposed Bali replacement"
+      ]
+    }
+  ]
+}

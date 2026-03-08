@@ -1,0 +1,44 @@
+{
+  "skill_name": "dhh-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review the code on this branch",
+      "expected_output": "A structured code review report with pass history showing iterative review-fix cycles, applied fixes, and a final Rails-worthy verdict",
+      "expectations": [
+        "The review identifies files changed on the current branch vs main",
+        "The review invokes the dhh-code-reviewer agent at least once",
+        "The review runs Rubocop on the changed files",
+        "The review auto-applies Critical and Major fixes without asking the user",
+        "The review runs tests after applying fixes to verify nothing broke",
+        "The review performs at least 2 passes (initial review + verification pass)",
+        "The final report includes a Pass History section showing each iteration",
+        "The final report includes an Applied Fixes section listing what was changed",
+        "The review exits when Rails-worthy verdict is reached or max passes hit",
+        "The state file .omc/state/dhh-review-state.json is cleaned up at the end"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "DHH review --staged",
+      "expected_output": "A review of only the staged git changes, with iterative fix loop",
+      "expectations": [
+        "The review scopes to staged files only (git diff --staged --name-only)",
+        "The review does not review unstaged or untracked files",
+        "The review follows the same iterative review-fix loop as a branch review",
+        "The final report correctly identifies the scope as staged changes"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Review app/models/",
+      "expected_output": "A review of all model files in the directory",
+      "expectations": [
+        "The review scans all Ruby files in app/models/",
+        "The review checks for concerns usage, proper scopes, and callback patterns",
+        "The review identifies anemic models if present",
+        "The review auto-applies fixes and verifies with tests"
+      ]
+    }
+  ]
+}
