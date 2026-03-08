@@ -41,7 +41,7 @@ Stories to implement:
 
 ### Step 2: Launch Parallel Agents
 
-For each story, spawn an agent using the Agent tool **without** `isolation: worktree`. The autopilot's Phase 1 creates the worktree in a persistent location (`../worktrees/$PROJECT_NAME/feature/STORY-ID`) that survives sandbox termination and remains accessible for manual testing:
+For each story, spawn an agent using the Agent tool **without** `isolation: worktree`. The autopilot's Phase 1 creates the worktree in a persistent location (`.worktrees/feature/STORY-ID`) that survives sandbox termination and remains accessible for manual testing:
 
 ```
 Agent(
@@ -54,7 +54,7 @@ Agent(
 **Do NOT use `isolation: worktree`** — it creates worktrees in sandbox-managed locations (`/private/tmp/`) that are lost when the sandbox closes and cannot be accessed for manual testing.
 
 Launch ALL agents in a single message so they run concurrently. Each agent:
-- Creates its own git worktree via Phase 1 (at `../worktrees/$PROJECT_NAME/feature/STORY-ID`)
+- Creates its own git worktree via Phase 1 (at `.worktrees/feature/STORY-ID`)
 - Runs the full 10-phase autopilot workflow inside that worktree
 - Creates its own branch and PR
 - Updates SmartSuite status independently
@@ -95,7 +95,7 @@ This catches issues the individual autopilot runs may have missed due to context
 
 Each story runs in its own git worktree. Three options for testing:
 
-1. **Test in worktree (recommended):** `cd ../worktrees/$PROJECT_NAME/feature/STORY-ID` — run the app on a different port, run tests, run quality checks. Multiple worktrees can run servers simultaneously on different ports.
+1. **Test in worktree (recommended):** `cd .worktrees/feature/STORY-ID` — run the app on a different port, run tests, run quality checks. Multiple worktrees can run servers simultaneously on different ports.
 2. **Check out branch:** `git checkout feature/STORY-ID` from the main repo directory.
 3. **Review on GitHub:** `gh pr view N` to review diff, CI, and screenshots.
 
@@ -103,14 +103,14 @@ For detailed commands, cleanup instructions, and a per-story testing checklist, 
 
 ## Post-Batch Workflow
 
-After the batch completes, each story's worktree persists at `../worktrees/$PROJECT_NAME/feature/STORY-ID`. This enables manual testing and follow-up changes:
+After the batch completes, each story's worktree persists at `.worktrees/feature/STORY-ID`. This enables manual testing and follow-up changes:
 
-1. **Test:** `cd ../worktrees/$PROJECT_NAME/feature/STORY-ID` — run the app, inspect the UI, run tests
+1. **Test:** `cd .worktrees/feature/STORY-ID` — run the app, inspect the UI, run tests
 2. **Fix issues:** Make changes directly in the worktree and commit
 3. **Resume autopilot:** Run `/omc-rails-autopilot STORY-ID` from inside the worktree to re-run reviews or later phases
 4. **Clean up** (only after PR is merged):
    ```bash
-   git worktree remove ../worktrees/$PROJECT_NAME/feature/STORY-ID
+   git worktree remove .worktrees/feature/STORY-ID
    ```
 
 **If a session dies mid-execution**, the worktrees and any committed work persist on disk. Check SmartSuite for story status — stories marked `in_progress` were started but may not have completed all phases. Resume from the worktree directory.
