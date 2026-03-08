@@ -2,7 +2,6 @@
 name: batch-stories
 description: This skill should be used when the user asks to "implement multiple stories", "batch stories", "run autopilot on several stories", "implement these stories", "batch autopilot", "run stories in parallel", "implement 5 stories", or wants to run the autopilot workflow on more than one SmartSuite story. Orchestrates parallel story implementation using isolated git worktrees with post-implementation quality passes.
 argument-hint: "[story-codes...]"
-disable-model-invocation: true
 ---
 
 # Batch Stories - Parallel Autonomous Implementation
