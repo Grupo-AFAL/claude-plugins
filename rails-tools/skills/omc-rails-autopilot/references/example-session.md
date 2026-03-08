@@ -7,7 +7,7 @@ Complete walkthrough of the omc-rails-autopilot workflow processing a SmartSuite
 ```
 User: /omc-rails-autopilot: GC-FND-002-US01
 
-=== Phase 0: Story Setup ===
+=== Phase 1: Story Setup ===
 
 Agent: Reading Necesidad de Software ID from CLAUDE.md...
        Project: Gobierno Corporativo (6972b393cbbe389c07f41770)
@@ -18,10 +18,10 @@ Agent: Fetching story GC-FND-002-US01 from SmartSuite...
        Necesidad de Software: Gobierno Corporativo (matches project)
        Status: backlog -> in_progress
 
-Agent: Creating worktree at ../worktrees/feature/GC-FND-002-US01
+Agent: Creating worktree at .worktrees/feature/GC-FND-002-US01
        Generating .claude/TASK.md with story details
 
-=== Phase 0.5: TDD Red Phase ===
+=== Phase 2: TDD Red Phase ===
 
 Agent: Writing tests first...
        - test/models/department_test.rb
@@ -39,7 +39,7 @@ Agent: Writing tests first...
 Agent: Running tests to confirm RED state...
        12 tests, 12 failures (expected - no implementation yet)
 
-=== Phase 1: TDD Green Phase (OMC Autopilot) ===
+=== Phase 3: TDD Green Phase (OMC Autopilot) ===
 
 Agent: Implementing to make tests pass...
        - Using ancestry gem for hierarchy
@@ -50,7 +50,17 @@ Agent: Implementing to make tests pass...
 Agent: Running tests...
        12 tests, 0 failures (GREEN)
 
-=== Phase 2: TDD Refactor Phase (AI DHH Reviews) ===
+Agent: Pushing WIP commit to preserve work...
+       git push -u origin feature/GC-FND-002-US01
+
+=== Phase 4: UI Integration ===
+
+Agent: Ensuring new pages are reachable from the UI...
+       - Adding "Departments" link to sidebar navigation
+       - Verifying link renders and navigates correctly
+       Running tests... 14 tests, 0 failures (still GREEN)
+
+=== Phase 5: Iterative AI Review (Refactor Phase) ===
 
 Agent: Invoking dhh-code-reviewer for Pass 1...
 DHH Review: "DepartmentService is unnecessary. Move logic to concern.
@@ -74,7 +84,7 @@ Agent: Invoking dhh-code-reviewer for Pass 3...
 DHH Review: "Rails-worthy. Clean use of ancestry and concerns.
             The scoped queries in the controller are idiomatic."
 
-=== Phase 2.5: Visual Verification ===
+=== Phase 6: Visual Verification ===
 
 Agent: Starting dev server for E2E browser testing...
        bin/rails server -p 3001 -e development -d --pid tmp/pids/server-e2e.pid
@@ -138,9 +148,9 @@ Agent: Invoking frontend-ui-ux with screenshots and view files...
 Agent: Stopping dev server and cleaning up screenshots...
        kill $(cat tmp/pids/server-e2e.pid)
        rm -rf tmp/screenshots/e2e-*.png
-       Phase 2.5 complete. Visual review approved.
+       Phase 6 complete. Visual review approved.
 
-=== Phase 3: Quality Gates ===
+=== Phase 7: Quality Gates ===
 
 Agent: Running quality gates...
        - bin/rails test: 156 passed, 0 failed
@@ -148,7 +158,7 @@ Agent: Running quality gates...
        - bin/brakeman: 0 warnings
        All gates passed.
 
-=== Phase 4: Commit & PR ===
+=== Phase 8: Commit & PR ===
 
 Agent: Creating commit...
        feat(GC-FND-002-US01): Add department hierarchy management
@@ -157,11 +167,32 @@ Agent: Pushing and creating PR...
        PR #12: feat(GC-FND-002-US01): Add department hierarchy management
        https://github.com/Grupo-AFAL/gobierno-corporativo/pull/12
 
+=== Phase 9: Documentation & Delivery ===
+
+Agent: Running /update-docs to sync docs site...
+       Updated docs/src/content/docs/modules/foundation/departments.mdx
+       Embedded screenshots from docs/src/assets/screenshots/GC-FND-002-US01/
+       Running bun run build... success
+
 Agent: Updating SmartSuite...
        Status: in_progress -> ready_for_review
        PR URL: linked
 
-Agent: Done. Story GC-FND-002-US01 complete.
+=== Phase 10: Final DHH Review ===
+
+Agent: Running final DHH review of ALL branch changes...
+       git diff main...feature/GC-FND-002-US01 -- (all files)
+
+DHH Review Pass 1: "The documentation phase introduced a minor naming
+            inconsistency in the MDX frontmatter. Otherwise, Rails-worthy."
+
+Agent: Fixing naming inconsistency...
+       Running tests... 14 tests, 0 failures (still GREEN)
+
+DHH Review Pass 2: "Rails-worthy. Clean implementation top to bottom."
+
+Agent: Setting autopilot state to complete.
+       Done. Story GC-FND-002-US01 complete.
 ```
 
 ## Session with `next` Command
@@ -177,7 +208,7 @@ Agent: Querying SmartSuite for next backlog story in this project...
        Found: GC-HRM-001-US03 - Employee onboarding checklist
        Status: backlog -> in_progress
 
-       [Proceeds with same Phase 0-4 workflow]
+       [Proceeds with same Phase 1-10 workflow]
 ```
 
 ## Escalation Example

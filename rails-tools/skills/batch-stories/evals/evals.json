@@ -8,7 +8,7 @@
       "expectations": [
         "The skill validates each story code exists in SmartSuite before launching",
         "The skill reports the list of stories that will be implemented with their titles",
-        "The skill launches one Agent per story with isolation: worktree",
+        "The skill launches one Agent per story without isolation: worktree (autopilot Phase 1 creates the worktree at .worktrees/feature/STORY-ID)",
         "All agents are launched in a single message (parallel, not sequential)",
         "Each agent receives a prompt that invokes /omc-rails-autopilot with the story code",
         "Each agent runs with run_in_background: true",
@@ -27,7 +27,7 @@
       "expectations": [
         "The skill queries SmartSuite for the top 3 backlog stories scoped to the current project",
         "The skill reports which stories were found with their codes and titles before launching",
-        "The skill launches 3 parallel agents in isolated worktrees",
+        "The skill launches 3 parallel agents (each creates its worktree via autopilot Phase 1)",
         "Each agent runs the full omc-rails-autopilot workflow independently",
         "The skill does not launch agents for stories that are not in backlog status"
       ]
@@ -38,7 +38,7 @@
       "expected_output": "Launches 5 parallel agents with monitoring, designed for overnight autonomous execution",
       "expectations": [
         "The skill launches all 5 agents in parallel (single message, not sequential)",
-        "Each agent gets its own isolated worktree",
+        "Each agent creates its own worktree via autopilot Phase 1 at .worktrees/feature/STORY-ID",
         "The skill warns about resource usage when launching 5 concurrent stories",
         "The skill sets up a monitoring loop to track progress across all 5 stories",
         "The batch continues running without requiring user interaction",

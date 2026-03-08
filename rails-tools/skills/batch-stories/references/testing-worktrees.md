@@ -89,7 +89,7 @@ git checkout feature/GC-FND-002-US02
 
 **Note:** Stash or commit any local changes before switching branches.
 
-## Option C: Review on GitHub
+## Option D: Review on GitHub
 
 Each story creates a PR. Review the diff, CI results, and screenshots directly on GitHub:
 
