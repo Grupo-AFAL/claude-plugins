@@ -61,7 +61,7 @@ Based on the argument (default is `--branch` when no argument provided):
 4. **Glob pattern**: Review matching files
 5. **`--staged`**: Get files from `git diff --staged --name-only`
 
-**Done when**: You have a list of files to review. If no files match, report "No files found for target" and stop — this is the only valid early exit.
+**Done when**: A list of files to review has been identified. If no files match, report "No files found for target" and stop — this is the only valid early exit.
 
 ### Step 2: Pre-Analysis
 
@@ -191,54 +191,9 @@ rm -f .omc/state/dhh-review-state.json
 
 **Done when**: Iterative loop complete (Rails-worthy or max passes), report generated, state file deleted. Review is complete.
 
-## Review Categories
+## Review Categories and Severity
 
-### Models
-- Uses concerns for shared behavior
-- Rich domain logic (not anemic)
-- Proper scopes defined
-- Callbacks are appropriate (data integrity only)
-- No service object patterns
-- State changes use separate records
-
-### Controllers
-- Thin controllers (< 10 lines per action)
-- CRUD only (no custom actions)
-- Proper authorization (Pundit)
-- Uses Current attributes
-- Responds to turbo_stream format
-
-### Views/Components
-- Uses Bali page components for full page layouts (IndexPage, ShowPage, FormPage, DashboardPage)
-- Uses AppLayout in layout files for admin sidebar structure
-- Uses Bali ViewComponents for UI elements (Card, DataTable, etc.)
-- DaisyUI semantic classes via Bali (not raw HTML)
-- Proper Turbo Frame usage
-- No inline JavaScript
-- Accessible markup
-
-### JavaScript
-- Stimulus controllers focused
-- Uses Values API
-- Uses Targets API
-- No jQuery patterns
-- Proper event handling
-
-### Tests
-- Uses fixtures (not factories)
-- Tests business logic
-- Doesn't test framework
-- Proper setup/teardown
-- Current attributes set
-
-## Severity Levels
-
-| Level | Description | Action |
-|-------|-------------|--------|
-| **Critical** | Violates core principles | Must fix before merge |
-| **Major** | Not Rails-worthy | Should fix |
-| **Minor** | Could be improved | Nice to have |
-| **Info** | Suggestions | Optional |
+For the full review checklist (Models, Controllers, Views/Components, JavaScript, Tests) and severity level definitions, consult **`references/review-categories.md`**.
 
 ## Integration
 

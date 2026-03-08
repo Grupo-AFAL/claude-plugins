@@ -91,118 +91,13 @@ This catches issues the individual autopilot runs may have missed due to context
 
 ## Manual Testing Guide
 
-Each story runs in its own git worktree. Here's how to test them:
+Each story runs in its own git worktree. Three options for testing:
 
-### Listing Active Worktrees
+1. **Test in worktree (recommended):** `cd ../worktrees/feature/STORY-ID` — run the app on a different port, run tests, run quality checks. Multiple worktrees can run servers simultaneously on different ports.
+2. **Check out branch:** `git checkout feature/STORY-ID` from the main repo directory.
+3. **Review on GitHub:** `gh pr view N` to review diff, CI, and screenshots.
 
-```bash
-git worktree list
-```
-
-Output:
-```
-/Users/you/code/afal/project           abc1234 [main]
-/Users/you/code/afal/worktrees/feature/GC-FND-002-US01  def5678 [feature/GC-FND-002-US01]
-/Users/you/code/afal/worktrees/feature/GC-FND-002-US02  ghi9012 [feature/GC-FND-002-US02]
-```
-
-### Option A: Test Directly in the Worktree (Recommended)
-
-Navigate to the worktree directory. It's a full copy of the repo with its own branch checked out:
-
-```bash
-# Go to the story's worktree
-cd ../worktrees/feature/GC-FND-002-US01
-
-# Install dependencies (if needed)
-bundle install
-bin/rails db:migrate
-
-# Run the app
-bin/rails server -p 3001
-
-# Run tests
-bin/rails test
-
-# Run quality checks
-bin/rubocop
-bin/brakeman --no-pager -q
-```
-
-Each worktree is independent — you can run multiple servers on different ports to test multiple stories simultaneously:
-
-```bash
-# Terminal 1: Story US01 on port 3001
-cd ../worktrees/feature/GC-FND-002-US01 && bin/rails server -p 3001
-
-# Terminal 2: Story US02 on port 3002
-cd ../worktrees/feature/GC-FND-002-US02 && bin/rails server -p 3002
-```
-
-### Option B: Check Out the Branch in Your Main Repo
-
-If you prefer working in your main repo directory:
-
-```bash
-# From your main project directory
-git checkout feature/GC-FND-002-US01
-
-# Test normally
-bin/rails test
-bin/rails server
-
-# Switch to next story
-git checkout feature/GC-FND-002-US02
-```
-
-**Note:** You must stash or commit any local changes before switching branches.
-
-### Option C: Review on GitHub
-
-Each story creates a PR. Review the diff, CI results, and screenshots directly on GitHub:
-
-```bash
-# List all open PRs from batch
-gh pr list --label batch-stories
-
-# View a specific PR
-gh pr view 42
-
-# Check CI status
-gh pr checks 42
-```
-
-### Cleaning Up Worktrees
-
-After testing and merging PRs, clean up the worktrees:
-
-```bash
-# Remove a specific worktree
-git worktree remove ../worktrees/feature/GC-FND-002-US01
-
-# Remove all batch worktrees at once
-git worktree list | grep worktrees/feature | awk '{print $1}' | xargs -I{} git worktree remove {}
-
-# Prune stale worktree references
-git worktree prune
-
-# Delete merged remote branches
-git fetch --prune
-```
-
-### Testing Checklist Per Story
-
-For each story PR, verify:
-
-- [ ] `bin/rails test` passes (all tests green)
-- [ ] `bin/rubocop` clean (no offenses)
-- [ ] `bin/brakeman --no-pager -q` clean (no warnings)
-- [ ] Feature is accessible from the UI (not just by URL)
-- [ ] Bali components used correctly (no raw HTML for available components)
-- [ ] Authorization gates in place (Pundit policies)
-- [ ] Screenshots in `docs/src/assets/screenshots/<story-id>/` look correct
-- [ ] CHANGELOG.md entry present
-- [ ] Documentation updated (if docs site exists)
+For detailed commands, cleanup instructions, and a per-story testing checklist, consult **`references/testing-worktrees.md`**.
 
 ## Limitations
 
