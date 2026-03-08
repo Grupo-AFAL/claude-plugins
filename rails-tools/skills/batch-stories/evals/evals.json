@@ -3,8 +3,8 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Implement these stories: GC-FND-002-US01 GC-FND-002-US02",
-      "expected_output": "Parallel autonomous implementation of both stories, each in an isolated worktree with its own branch and PR, with post-batch quality review",
+      "prompt": "Implement these stories: GC-DOC-US031 GC-DOC-US019 GC-DOC-US020",
+      "expected_output": "Parallel autonomous implementation of all 3 stories, each in an isolated worktree with its own branch and PR, with post-batch quality review",
       "expectations": [
         "The skill validates each story code exists in SmartSuite before launching",
         "The skill reports the list of stories that will be implemented with their titles",
@@ -34,13 +34,12 @@
     },
     {
       "id": 3,
-      "prompt": "Implement these 5 stories and let me review them tomorrow: GC-FND-002-US01 GC-FND-002-US02 GC-FND-003-US01 GC-FND-003-US02 GC-FND-004-US01",
-      "expected_output": "Launches 5 parallel agents with monitoring, designed for overnight autonomous execution",
+      "prompt": "Implement these stories and let me review them tomorrow: GC-DOC-US031 GC-DOC-US019 GC-DOC-US020",
+      "expected_output": "Launches 3 parallel agents with monitoring, designed for overnight autonomous execution",
       "expectations": [
-        "The skill launches all 5 agents in parallel (single message, not sequential)",
+        "The skill launches all 3 agents in parallel (single message, not sequential)",
         "Each agent creates its own worktree via autopilot Phase 1 at .worktrees/feature/STORY-ID",
-        "The skill warns about resource usage when launching 5 concurrent stories",
-        "The skill sets up a monitoring loop to track progress across all 5 stories",
+        "The skill sets up a monitoring loop to track progress across all 3 stories",
         "The batch continues running without requiring user interaction",
         "Each story produces an independent PR that can be reviewed separately"
       ]
