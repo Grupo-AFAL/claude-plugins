@@ -41,22 +41,24 @@ Stories to implement:
 
 ### Step 2: Launch Parallel Agents
 
-For each story, spawn an agent using the Agent tool with `isolation: worktree`:
+For each story, spawn an agent using the Agent tool **without** `isolation: worktree`. The autopilot's Phase 1 creates the worktree in a persistent location (`../worktrees/feature/STORY-ID`) that survives sandbox termination and remains accessible for manual testing:
 
 ```
 Agent(
   description: "Autopilot: GC-FND-002-US01",
-  prompt: "Run /omc-rails-autopilot GC-FND-002-US01 — complete all 10 phases autonomously.",
-  isolation: "worktree",
+  prompt: "Run /omc-rails-autopilot GC-FND-002-US01 — complete all 10 phases autonomously. Work inside the worktree created by Phase 1.",
   run_in_background: true
 )
 ```
 
+**Do NOT use `isolation: worktree`** — it creates worktrees in sandbox-managed locations (`/private/tmp/`) that are lost when the sandbox closes and cannot be accessed for manual testing.
+
 Launch ALL agents in a single message so they run concurrently. Each agent:
-- Gets its own git worktree (isolated copy of the repo)
-- Runs the full 10-phase autopilot workflow
+- Creates its own git worktree via Phase 1 (at `../worktrees/feature/STORY-ID`)
+- Runs the full 10-phase autopilot workflow inside that worktree
 - Creates its own branch and PR
 - Updates SmartSuite status independently
+- Leaves the worktree intact for manual testing and further changes
 
 ### Step 3: Monitor Progress
 
@@ -99,18 +101,19 @@ Each story runs in its own git worktree. Three options for testing:
 
 For detailed commands, cleanup instructions, and a per-story testing checklist, consult **`references/testing-worktrees.md`**.
 
-## Sandbox and Session Recovery
+## Post-Batch Workflow
 
-When agents run inside a Docker sandbox or isolated environment, **worktrees inside the container are lost when the sandbox closes**. The autopilot's early push (Phase 3) mitigates this — each story's branch is pushed to the remote as soon as tests pass, before review and polish phases.
+After the batch completes, each story's worktree persists at `../worktrees/feature/STORY-ID`. This enables manual testing and follow-up changes:
 
-**If a sandbox dies mid-execution:**
+1. **Test:** `cd ../worktrees/feature/STORY-ID` — run the app, inspect the UI, run tests
+2. **Fix issues:** Make changes directly in the worktree and commit
+3. **Resume autopilot:** Run `/omc-rails-autopilot STORY-ID` from inside the worktree to re-run reviews or later phases
+4. **Clean up** (only after PR is merged):
+   ```bash
+   git worktree remove ../worktrees/feature/STORY-ID
+   ```
 
-1. Check which branches were pushed: `git branch -r | grep feature/`
-2. Check out any pushed branch locally: `git fetch && git checkout feature/STORY-ID`
-3. Check SmartSuite for story status — stories marked `in_progress` were started but may not be complete
-4. Resume with `/omc-rails-autopilot STORY-ID` to pick up from where the agent left off
-
-**If a branch was NOT pushed** (agent died before Phase 3 completed), the work is lost. Re-run the story with `/omc-rails-autopilot STORY-ID`.
+**If a session dies mid-execution**, the worktrees and any committed work persist on disk. Check SmartSuite for story status — stories marked `in_progress` were started but may not have completed all phases. Resume from the worktree directory.
 
 ## Limitations
 

@@ -48,9 +48,32 @@ cd ../worktrees/feature/GC-FND-002-US01 && bin/rails server -p 3001
 cd ../worktrees/feature/GC-FND-002-US02 && bin/rails server -p 3002
 ```
 
-## Option B: Check Out the Branch in the Main Repo
+## Option B: Continue Working in the Worktree
 
-To work from the main repo directory instead:
+After manual testing, make additional changes directly in the worktree. The worktree is a full repo checkout — edit files, run tests, commit, and push as normal:
+
+```bash
+cd ../worktrees/feature/GC-FND-002-US01
+
+# Make fixes based on manual testing
+# ... edit files ...
+
+# Commit and push
+git add -A
+git commit -m "fix(GC-FND-002-US01): address manual testing feedback"
+git push
+```
+
+To re-run a review or later autopilot phases from the worktree:
+
+```bash
+cd ../worktrees/feature/GC-FND-002-US01
+claude -p "/omc-rails-autopilot GC-FND-002-US01"
+```
+
+## Option C: Check Out the Branch in the Main Repo
+
+To work from the main repo directory instead (only after removing the worktree):
 
 ```bash
 # From the main project directory
