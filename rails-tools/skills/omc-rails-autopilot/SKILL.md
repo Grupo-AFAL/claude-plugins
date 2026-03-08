@@ -122,6 +122,18 @@ Delegate to OMC autopilot to implement minimum code making all tests pass. Exist
 
 **Goal:** Minimum code to reach GREEN state. Do not over-engineer.
 
+### Early Push (Work Preservation)
+
+After all tests pass, push the branch to remote immediately. This ensures the implementation is preserved even if the sandbox or session terminates unexpectedly:
+
+```bash
+git add -A
+git commit -m "wip(STORY_ID): implementation complete, tests green"
+git push -u origin feature/STORY_ID
+```
+
+This is a work-in-progress commit — it will be amended or squashed in Phase 8. The priority is ensuring the code is on the remote.
+
 ## Phase 4: UI Integration
 
 **This phase always runs — even if no new pages were added.** Verify the new functionality is accessible from the application UI. Do not leave features accessible only by typing URLs manually.

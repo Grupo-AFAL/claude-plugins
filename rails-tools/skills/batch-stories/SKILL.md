@@ -99,11 +99,24 @@ Each story runs in its own git worktree. Three options for testing:
 
 For detailed commands, cleanup instructions, and a per-story testing checklist, consult **`references/testing-worktrees.md`**.
 
+## Sandbox and Session Recovery
+
+When agents run inside a Docker sandbox or isolated environment, **worktrees inside the container are lost when the sandbox closes**. The autopilot's early push (Phase 3) mitigates this — each story's branch is pushed to the remote as soon as tests pass, before review and polish phases.
+
+**If a sandbox dies mid-execution:**
+
+1. Check which branches were pushed: `git branch -r | grep feature/`
+2. Check out any pushed branch locally: `git fetch && git checkout feature/STORY-ID`
+3. Check SmartSuite for story status — stories marked `in_progress` were started but may not be complete
+4. Resume with `/omc-rails-autopilot STORY-ID` to pick up from where the agent left off
+
+**If a branch was NOT pushed** (agent died before Phase 3 completed), the work is lost. Re-run the story with `/omc-rails-autopilot STORY-ID`.
+
 ## Limitations
 
 - **Resource intensive:** Each parallel agent consumes its own context window and API tokens. Limit to 3-5 concurrent stories for best results.
 - **Database contention:** All worktrees share the same development database. Stories that modify the same tables may conflict during migrations. Run `bin/rails db:migrate` in each worktree if needed.
-- **Session-scoped:** The batch and monitoring loop only run while Claude Code is open. If the session ends, in-progress agents may be interrupted (but their worktrees and any committed work persist).
+- **Session-scoped:** The batch and monitoring loop only run while Claude Code is open. If the session ends, in-progress agents may be interrupted. Completed work is preserved on the remote (branches and PRs) thanks to the early push in Phase 3.
 
 ## Integration
 
