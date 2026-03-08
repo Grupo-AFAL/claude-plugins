@@ -4,25 +4,45 @@
     {
       "id": 1,
       "prompt": "Implement these stories: GC-FND-002-US01 GC-FND-002-US02",
-      "expected_output": "Parallel agent launches with isolated worktrees, one per story",
+      "expected_output": "Parallel autonomous implementation of both stories, each in an isolated worktree with its own branch and PR, with post-batch quality review",
       "expectations": [
-        "The skill validates story codes exist in SmartSuite before launching",
-        "The skill reports the list of stories that will be implemented",
+        "The skill validates each story code exists in SmartSuite before launching",
+        "The skill reports the list of stories that will be implemented with their titles",
         "The skill launches one Agent per story with isolation: worktree",
         "All agents are launched in a single message (parallel, not sequential)",
+        "Each agent receives a prompt that invokes /omc-rails-autopilot with the story code",
         "Each agent runs with run_in_background: true",
-        "The skill sets up a monitoring loop using /loop after launching agents",
-        "The skill reports a progress summary table as agents complete"
+        "The skill sets up a monitoring loop after launching agents",
+        "The skill reports a progress summary table showing story, status, branch, and PR columns",
+        "Each completed story results in a separate git branch (not all changes on one branch)",
+        "Each completed story results in a separate PR",
+        "The skill offers to run a post-batch quality pass (/dhh-review and /bali-view-audit) on completed PRs",
+        "SmartSuite story statuses are updated during execution"
       ]
     },
     {
       "id": 2,
       "prompt": "Batch autopilot next 3",
-      "expected_output": "Fetches 3 stories from SmartSuite backlog and launches parallel agents",
+      "expected_output": "Fetches 3 stories from SmartSuite backlog and launches parallel agents in isolated worktrees",
       "expectations": [
-        "The skill queries SmartSuite for the top 3 backlog stories",
-        "The skill reports which stories were found before launching",
-        "The skill launches parallel agents in isolated worktrees"
+        "The skill queries SmartSuite for the top 3 backlog stories scoped to the current project",
+        "The skill reports which stories were found with their codes and titles before launching",
+        "The skill launches 3 parallel agents in isolated worktrees",
+        "Each agent runs the full omc-rails-autopilot workflow independently",
+        "The skill does not launch agents for stories that are not in backlog status"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Implement these 5 stories and let me review them tomorrow: GC-FND-002-US01 GC-FND-002-US02 GC-FND-003-US01 GC-FND-003-US02 GC-FND-004-US01",
+      "expected_output": "Launches 5 parallel agents with monitoring, designed for overnight autonomous execution",
+      "expectations": [
+        "The skill launches all 5 agents in parallel (single message, not sequential)",
+        "Each agent gets its own isolated worktree",
+        "The skill warns about resource usage when launching 5 concurrent stories",
+        "The skill sets up a monitoring loop to track progress across all 5 stories",
+        "The batch continues running without requiring user interaction",
+        "Each story produces an independent PR that can be reviewed separately"
       ]
     }
   ]

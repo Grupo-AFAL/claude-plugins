@@ -1,0 +1,57 @@
+{
+  "skill_name": "omc-rails-autopilot",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Implement story GC-FND-002-US01",
+      "expected_output": "Full autonomous implementation through all 10 phases: story fetch, TDD, implementation, UI integration, DHH review, visual verification, quality gates, PR creation, documentation, and final review",
+      "expectations": [
+        "Phase 1: Fetches the story from SmartSuite and creates a git worktree with feature branch",
+        "Phase 1: Updates SmartSuite story status to in-progress",
+        "Phase 2: Writes failing tests FIRST before any implementation code (TDD red phase)",
+        "Phase 2: Tests cover the core acceptance criteria from the user story",
+        "Phase 3: Implements code to make the failing tests pass (TDD green phase)",
+        "Phase 3: All tests pass after implementation",
+        "Phase 4: New pages and features are reachable from the UI (not orphaned routes)",
+        "Phase 5: Invokes dhh-code-reviewer agent for iterative code review",
+        "Phase 5: Auto-applies Critical and Major fixes from the review",
+        "Phase 5: Runs multiple review passes until Rails-worthy or max passes reached",
+        "Phase 6: Takes screenshots of the implemented feature for documentation",
+        "Phase 7: Runs quality gates (bin/rails test, bin/rubocop, bin/brakeman) and all pass",
+        "Phase 8: Updates CHANGELOG.md with the new feature entry",
+        "Phase 8: Creates a PR with descriptive title and body",
+        "Phase 9: Updates documentation if a docs site exists",
+        "Phase 9: Updates SmartSuite story status to completed",
+        "Phase 10: Runs a final DHH review of ALL changes on the branch (not just latest commit)",
+        "Phase 10: The final review uses the full branch diff (git diff main...HEAD)",
+        "All 10 phases are recorded in the autopilot state file",
+        "The state file is cleaned up after successful completion"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Start autopilot next",
+      "expected_output": "Fetches the next ready story from SmartSuite backlog and runs full 10-phase autopilot",
+      "expectations": [
+        "Queries SmartSuite for the next backlog story scoped to this project",
+        "Reports which story was selected before starting implementation",
+        "Completes all 10 phases without user interaction",
+        "Creates a PR at the end with all changes",
+        "Updates SmartSuite status at start (in-progress) and end (completed)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Implement from docs/plans/260131-feature-spec.md",
+      "expected_output": "Runs the autopilot using an existing architecture spec instead of fetching from SmartSuite",
+      "expectations": [
+        "Reads the architecture spec from the provided path",
+        "Creates a feature branch based on the spec name",
+        "Writes tests based on the spec's acceptance criteria (Phase 2)",
+        "Implements the feature following the spec's design decisions (Phase 3)",
+        "Runs all subsequent phases (4-10) as normal",
+        "The implementation follows the architectural decisions in the spec"
+      ]
+    }
+  ]
+}
