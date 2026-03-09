@@ -79,42 +79,76 @@ Each worker receives this preamble customized with their story code and task ID:
 You are a TEAM WORKER in team "{team_name}". Your name is "{worker_name}".
 You report to the team lead ("team-lead").
 
+== MANDATORY FIRST ACTION ==
+
+Before doing ANYTHING else, call TaskUpdate NOW:
+  TaskUpdate(taskId: "{TASK_ID}", status: "in_progress", owner: "{worker_name}")
+
+This is non-negotiable. Do it before reading files, before invoking skills, before any work.
+
 == YOUR TASK ==
 
-Run /omc-rails-autopilot {STORY_CODE} and complete ALL 10 phases:
-- Phase 1: Story setup + worktree creation
-- Phase 2: TDD red phase (write failing tests)
-- Phase 3: Implementation (make tests pass) + early push
-- Phase 4: UI integration (pages reachable from navigation)
-- Phase 5: Iterative DHH review (until "Rails-worthy")
-- Phase 6: Visual verification (E2E browser flows + screenshots)
-- Phase 7: Quality gates (tests, rubocop, brakeman)
-- Phase 8: CHANGELOG + commit + PR
-- Phase 9: Documentation + SmartSuite update
-- Phase 10: Final DHH review of ALL branch changes
-
+Run /omc-rails-autopilot {STORY_CODE} and complete ALL 10 phases.
 Every phase is mandatory. Do NOT skip any phase. Do NOT declare done until Phase 10 is complete.
 
-== WORK PROTOCOL ==
+== PHASE REPORTING (MANDATORY) ==
 
-1. CLAIM: Call TaskUpdate to set your task to in_progress:
-   {"taskId": "{TASK_ID}", "status": "in_progress", "owner": "{worker_name}"}
+You MUST send a progress message to the lead at the START of each phase.
+Use this exact format — the lead parses these to build a progress table:
 
-2. WORK: Invoke /omc-rails-autopilot {STORY_CODE} and let it run all 10 phases.
-   You ARE allowed to invoke skills and spawn sub-agents (dhh-code-reviewer, etc.).
+  SendMessage(recipient: "team-lead", content: "PHASE {N}/10 {STORY_CODE}: {phase_name}", summary: "{STORY_CODE} phase {N}")
 
-3. COMPLETE: When all 10 phases are done, mark the task completed:
-   {"taskId": "{TASK_ID}", "status": "completed"}
+The 10 phases and their names:
+  PHASE 1/10: Story setup + worktree creation
+  PHASE 2/10: TDD red phase (failing tests)
+  PHASE 3/10: Implementation + early push
+  PHASE 4/10: UI integration
+  PHASE 5/10: DHH review (iterative)
+  PHASE 6/10: Visual verification
+  PHASE 7/10: Quality gates
+  PHASE 8/10: CHANGELOG + commit + PR
+  PHASE 9/10: Documentation + SmartSuite update
+  PHASE 10/10: Final DHH review
 
-4. REPORT: Notify the lead via SendMessage:
-   {"type": "message", "recipient": "team-lead",
-    "content": "Completed {STORY_CODE}: PR #XX, all 10 phases done, tests green.",
-    "summary": "{STORY_CODE} complete"}
+Example: SendMessage(recipient: "team-lead", content: "PHASE 5/10 GC-FND-002-US01: DHH review (iterative)", summary: "GC-FND-002-US01 phase 5")
 
-== ERRORS ==
-If you cannot complete the story, report the failure to the lead:
-{"type": "message", "recipient": "team-lead",
- "content": "FAILED {STORY_CODE}: <reason>", "summary": "{STORY_CODE} failed"}
+If a phase is blocked or skipped (e.g. docs build fails due to no network), report it:
+  SendMessage(recipient: "team-lead", content: "PHASE 9/10 {STORY_CODE}: SKIPPED - no network for docs build", summary: "{STORY_CODE} phase 9 skipped")
+
+== WORK ==
+
+Invoke /omc-rails-autopilot {STORY_CODE} and let it run all 10 phases.
+You ARE allowed to invoke skills and spawn sub-agents (dhh-code-reviewer, etc.).
+
+== COMPLETION REPORT (MANDATORY) ==
+
+When all 10 phases are done, send a structured completion report AND update the task:
+
+  TaskUpdate(taskId: "{TASK_ID}", status: "completed")
+
+  SendMessage(recipient: "team-lead", content: """
+  COMPLETED {STORY_CODE}
+  Branch: feature/{STORY_CODE}
+  PR: #XX
+  Tests: XX passed, 0 failed
+  Rubocop: clean | N offenses
+  Brakeman: clean | N warnings
+  DHH verdict: <final verdict from Phase 10>
+  Phases skipped: none | <list>
+  """, summary: "{STORY_CODE} complete")
+
+== FAILURE REPORT ==
+
+If you cannot complete the story:
+
+  TaskUpdate(taskId: "{TASK_ID}", status: "failed")
+
+  SendMessage(recipient: "team-lead", content: """
+  FAILED {STORY_CODE}
+  Failed at: Phase N - {phase_name}
+  Reason: <what went wrong>
+  Branch: feature/{STORY_CODE} (partial work committed: yes/no)
+  """, summary: "{STORY_CODE} failed at phase N")
 
 == SHUTDOWN ==
 When you receive a shutdown_request, respond with:
@@ -125,19 +159,21 @@ When you receive a shutdown_request, respond with:
 
 The lead monitors via two channels:
 
-1. **Inbound messages** — team members send `SendMessage` when they complete or fail. These arrive automatically.
-2. **TaskList polling** — periodically check overall progress.
+1. **Inbound messages** — workers send phase updates (`PHASE N/10 ...`) and completion/failure reports via `SendMessage`. These arrive automatically and provide real-time progress.
+2. **TaskList polling** — periodically check overall task status (pending/in_progress/completed/failed).
 
-Report a summary table as members complete:
+Parse the `PHASE N/10` messages to maintain a live progress table. Update and display it as messages arrive:
 
 ```
 Batch Progress:
-  | Story | Status | Branch | PR |
-  |-------|--------|--------|----|
-  | GC-FND-002-US01 | Complete | feature/GC-FND-002-US01 | #42 |
-  | GC-FND-002-US02 | Phase 5 (DHH review) | feature/GC-FND-002-US02 | — |
-  | GC-FND-003-US01 | Complete | feature/GC-FND-003-US01 | #43 |
+  | Story           | Phase | Status                | Branch                  | PR  |
+  |-----------------|-------|-----------------------|-------------------------|-----|
+  | GC-FND-002-US01 | 10/10 | Complete              | feature/GC-FND-002-US01 | #42 |
+  | GC-FND-002-US02 |  5/10 | DHH review (iterative)| feature/GC-FND-002-US02 | —   |
+  | GC-FND-003-US01 |  9/10 | Phase 9 SKIPPED       | feature/GC-FND-003-US01 | #43 |
 ```
+
+If a worker hasn't sent a phase update in >10 minutes, check its task status via TaskList.
 
 ### Step 5: Shutdown and Cleanup
 
@@ -188,6 +224,7 @@ After the batch completes, each story's worktree persists at `.worktrees/feature
 
 - **Resource intensive:** Each team member is a full Claude Code session consuming its own context window and API tokens. Limit to 3-5 concurrent stories for best results.
 - **Database contention:** All worktrees share the same development database. Stories that modify the same tables may conflict during migrations. Run `bin/rails db:migrate` in each worktree if needed.
+- **Sandbox network restrictions:** When running in a sandboxed environment, workers cannot install npm packages or reach external services. Phase 9 (Documentation) may fail if it requires `npm run docs:build`. Workers are instructed to report skipped phases — review the final summary for any `SKIPPED` entries.
 - **Session-scoped:** The team and monitoring loop only run while Claude Code is open. If the session ends, in-progress members may be interrupted. Completed work is preserved on the remote (branches and PRs) thanks to the early push in Phase 3.
 
 ## Integration
