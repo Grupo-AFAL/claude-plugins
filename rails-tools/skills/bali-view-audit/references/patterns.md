@@ -151,6 +151,9 @@ These patterns have the biggest impact on view consistency and maintainability.
 | Manual search input with auto-submit | `Bali::SearchInput::Component` | Grep for search inputs with debounce/submit JS |
 | Bulk selection checkboxes + floating bar | `Bali::BulkActions::Component` | Grep for select-all/bulk-action patterns |
 | Manual rich text editor setup | `Bali::RichTextEditor::Component` | Grep for Trix/ActionText without Bali wrapper |
+| Manual block-based editor setup | `Bali::BlockEditor::Component` | Grep for BlockNote/ProseMirror without Bali wrapper |
+| Manual document editor with versioning | `Bali::DocumentEditor::Component` | Grep for editor + version history panels |
+| Manual document page layout (TOC + editor + metadata) | `Bali::DocumentPage::Component` | Grep for three-panel document layouts |
 | Manual Active Storage direct upload UI | `Bali::DirectUpload::Component` | Grep for direct upload JS without Bali wrapper |
 | Advanced filter builder UI | `Bali::Filters::Component` | Grep for complex filter forms with add/remove groups |
 
@@ -176,6 +179,7 @@ These are wrong usages of existing Bali components that must be corrected.
 | Raw HTML `data-controller="slim-select"` | `f.slim_select_group` | Manual Stimulus wiring in forms |
 | `Bali::Form::TextField::Component` | `f.text_field_group` | Form ViewComponents instead of FormBuilder |
 | `DeleteLink.new(variant: :error)` | No variant needed, always error-styled | `variant:` in DeleteLink renders |
+| `SideMenu.new(collapsable: true)` | `SideMenu.new(collapsible: true)` | `collapsable:` is deprecated |
 
 ## Audit Grep Commands
 

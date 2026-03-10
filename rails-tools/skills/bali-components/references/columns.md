@@ -1,106 +1,126 @@
 # Bali::Columns::Component
 
-Grid layout component for responsive column-based layouts.
+Layout component supporting two modes: flex (with slots) and grid (auto-flow).
 
-## Parameters
+## Modes
 
-- `gap:` (Symbol) - Gap size between columns. Options: `:none`, `:px`, `:xs`, `:sm`, `:md` (default), `:lg`, `:xl`, `:'2xl'`
+**Flex mode** (default): Use `with_column` slots. Each column can have its own size.
+
+**Grid mode**: Set `cols:` param. Children go directly in the block — no `with_column` wrappers needed.
+
+## Parameters (Columns::Component)
+
+- `gap:` (Symbol) - Gap between columns. Default: `:md`
+- `cols:` (Integer, nil) - Grid mode: auto-flow column count (1-12). Enables grid mode.
+- `cols_md:` (Integer, nil) - Grid columns at md breakpoint (768px+)
+- `cols_lg:` (Integer, nil) - Grid columns at lg breakpoint (1024px+)
+- `cols_xl:` (Integer, nil) - Grid columns at xl breakpoint (1280px+)
 - `wrap:` (Boolean) - Allow columns to wrap to multiple lines. Default: `false`
 - `center:` (Boolean) - Center columns horizontally. Default: `false`
 - `middle:` (Boolean) - Center columns vertically. Default: `false`
-- `mobile:` (Boolean) - Keep columns on mobile instead of stacking. Default: `false`
-- Standard HTML attributes accepted via `**options`
+- `mobile:` (Boolean) - Keep columns horizontal on mobile instead of stacking. Default: `false`
 
-## Slots
+## Parameters (Column::Component, flex mode only)
 
-### `columns` (renders_many)
-Individual column items. Uses `Bali::Columns::Column::Component`.
+- `size:` (Symbol or Integer, nil) - Column width
+- `md:` (Symbol or Integer, nil) - Width at md breakpoint (768px+)
+- `lg:` (Symbol or Integer, nil) - Width at lg breakpoint (1024px+)
+- `xl:` (Symbol or Integer, nil) - Width at xl breakpoint (1280px+)
+- `auto:` (Boolean) - Make column only as wide as its content. Default: `false`
+
+### Symbolic Sizes
+
+`:full`, `:half`, `:one_third` / `:third`, `:two_thirds`, `:one_quarter` / `:quarter`, `:three_quarters`, `:one_fifth`, `:two_fifths`, `:three_fifths`, `:four_fifths`
+
+Numeric sizes 1-12 map to Tailwind grid fractions.
 
 ## Gap Sizes
 
-| Size | CSS Class | Value |
-|------|-----------|-------|
-| `:none` | `gap-none` | 0 |
+| Key | CSS Class | Approx. Value |
+|-----|-----------|---------------|
+| `:none` | `gap-0` | 0 |
 | `:px` | `gap-px` | 1px |
-| `:xs` | `gap-xs` | 0.25rem |
-| `:sm` | `gap-sm` | 0.5rem |
-| `:md` | `gap-md` | 0.75rem (default) |
-| `:lg` | `gap-lg` | 1rem |
-| `:xl` | `gap-xl` | 1.5rem |
-| `:'2xl'` | `gap-2xl` | 2rem |
+| `:xs` | `gap-1` | 0.25rem |
+| `:sm` | `gap-2` | 0.5rem |
+| `:md` | `gap-3` | 0.75rem (default) |
+| `:lg` | `gap-4` | 1rem |
+| `:xl` | `gap-6` | 1.5rem |
+| `:'2xl'` | `gap-8` | 2rem |
 
 ## Usage
 
-### Basic Two-Column Layout
+### Basic Two-Column (Flex Mode)
 
 ```erb
 <%= render Bali::Columns::Component.new do |columns| %>
   <% columns.with_column do %>
-    <div>Left column content</div>
+    <div>Left column</div>
   <% end %>
 
   <% columns.with_column do %>
-    <div>Right column content</div>
+    <div>Right column</div>
   <% end %>
 <% end %>
 ```
 
-### Custom Gap
+### Responsive Columns (Flex Mode)
+
+Stack on mobile, side-by-side at md, sized at lg:
+
+```erb
+<%= render Bali::Columns::Component.new(gap: :lg) do |columns| %>
+  <% columns.with_column(size: :full, md: :two_thirds) do %>
+    <div>Main content</div>
+  <% end %>
+
+  <% columns.with_column(size: :full, md: :one_third) do %>
+    <div>Sidebar</div>
+  <% end %>
+<% end %>
+```
+
+### Grid Mode (Auto-Flow, No Slots)
+
+Children fill grid cells automatically — no `with_column` needed:
+
+```erb
+<%= render Bali::Columns::Component.new(cols: 3, gap: :md) do %>
+  <div>Item 1</div>
+  <div>Item 2</div>
+  <div>Item 3</div>
+  <div>Item 4</div>
+<% end %>
+```
+
+### Responsive Grid
+
+1 column on mobile, 2 at md, 4 at lg:
+
+```erb
+<%= render Bali::Columns::Component.new(cols: 1, cols_md: 2, cols_lg: 4, gap: :sm) do %>
+  <% @products.each do |product| %>
+    <div><%= product.name %></div>
+  <% end %>
+<% end %>
+```
+
+### Main + Sidebar Layout
 
 ```erb
 <%= render Bali::Columns::Component.new(gap: :xl) do |columns| %>
-  <% columns.with_column do %>
-    <div>Column 1</div>
+  <% columns.with_column(size: :full, lg: :two_thirds) do %>
+    <%= render @article %>
   <% end %>
 
-  <% columns.with_column do %>
-    <div>Column 2</div>
-  <% end %>
-<% end %>
-```
-
-### Centered Columns
-
-```erb
-<%= render Bali::Columns::Component.new(center: true, middle: true) do |columns| %>
-  <% columns.with_column do %>
-    <div>Centered content</div>
-  <% end %>
-
-  <% columns.with_column do %>
-    <div>Also centered</div>
-  <% end %>
-<% end %>
-```
-
-### Wrapping Columns
-
-```erb
-<%= render Bali::Columns::Component.new(wrap: true, gap: :lg) do |columns| %>
-  <% 6.times do %>
-    <% columns.with_column do %>
-      <div>Column item</div>
-    <% end %>
-  <% end %>
-<% end %>
-```
-
-### Mobile Persistence
-
-```erb
-<%= render Bali::Columns::Component.new(mobile: true) do |columns| %>
-  <% columns.with_column do %>
-    <div>Stays columnar on mobile</div>
-  <% end %>
-
-  <% columns.with_column do %>
-    <div>Not stacked</div>
+  <% columns.with_column(size: :full, lg: :one_third) do %>
+    <%= render @sidebar %>
   <% end %>
 <% end %>
 ```
 
 ## Notes
 
-- By default, columns stack vertically on mobile unless `mobile: true` is set
-- The `wrap` parameter enables multi-line layouts when columns exceed container width
-- `center` and `middle` control horizontal and vertical alignment respectively
+- By default, columns stack vertically on mobile. Use `mobile: true` to keep them horizontal.
+- Grid mode (`cols:`) and flex mode (`with_column`) are mutually exclusive — pick one per component.
+- `cols_md`/`cols_lg`/`cols_xl` only apply in grid mode.
+- Responsive size params (`md:`, `lg:`, `xl:`) on `with_column` only apply in flex mode.

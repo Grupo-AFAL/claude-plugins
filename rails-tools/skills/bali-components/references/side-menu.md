@@ -6,7 +6,8 @@ Collapsible sidebar navigation component with mobile support, menu switching, an
 
 - `current_path:` (String) **Required** - The current request path for active state detection
 - `fixed:` (Boolean) - Fixed to viewport (true) or inline flow (false). Default: `true`
-- `collapsable:` (Boolean) - Whether the sidebar can collapse to icon-only mode. Default: `false`
+- `collapsible:` (Boolean) - Whether the sidebar can collapse to icon-only mode. Default: `false`
+- `collapsable:` (Boolean) - **Deprecated**, use `collapsible:` instead
 - `group_behavior:` (Symbol) - How nested items behave. Options: `:expandable` (default), `:dropdown`
 - `brand:` (String) - Optional brand name shown in the header (e.g., "ACME")
 - `mobile_trigger_id:` (String) - Mobile trigger checkbox ID. Default: `'side-menu-mobile-trigger'`
@@ -22,10 +23,39 @@ Navigation list groups. Accepts:
 - `title:` (String) - Optional section title
 - Block content with navigation items
 
-## Group Behaviors
+### `bottom_groups` (renders_many)
+Groups of items pinned to the bottom of the sidebar. Accepts:
+- `name:` (String) **Required** - Group header label
+- `icon:` (String) - Optional icon for the group header
 
-- `:expandable` - Click to expand/collapse using DaisyUI collapse (default)
-- `:dropdown` - Show submenu in dropdown on hover
+## Item Parameters
+
+Items rendered inside lists accept:
+- `href:` (String) - Link destination
+- `name:` (String) - Label text
+- `icon:` (String) - Icon name
+- `authorized:` (Boolean) - Whether to render the item. Default: `true`
+- `disabled:` (Boolean) - Render as disabled. Default: `false`
+- `target:` (String) - Link target attribute (e.g., `"_blank"`)
+- `active:` (Boolean) - Force active state
+- `match:` (Symbol) - Active matching strategy: `:exact`, `:partial`, `:starts_with`, `:crud`
+- `badge:` (String) - Badge text displayed next to the item label
+- `badge_color:` (String) - DaisyUI color for the badge (e.g., `"primary"`, `"error"`)
+
+## MenuSwitch Component
+
+`Bali::SideMenu::MenuSwitch::Component` renders a switcher entry in the sidebar header:
+
+```ruby
+MenuSwitch::Component.new(
+  title:,      # String, required - main label
+  href:,       # String, required - link destination
+  icon:,       # String, required - icon name
+  subtitle:,   # String, optional
+  active:,     # Boolean, default: false
+  authorized:  # Boolean, default: true
+)
+```
 
 ## Usage
 
@@ -34,22 +64,12 @@ Navigation list groups. Accepts:
 ```erb
 <%= render Bali::SideMenu::Component.new(current_path: request.path) do |menu| %>
   <% menu.with_list(title: "Navigation") do %>
-    <%= link_to "Dashboard", dashboard_path, class: "menu-item" %>
-    <%= link_to "Users", users_path, class: "menu-item" %>
-    <%= link_to "Settings", settings_path, class: "menu-item" %>
-  <% end %>
-<% end %>
-```
-
-### With Brand
-
-```erb
-<%= render Bali::SideMenu::Component.new(
-  current_path: request.path,
-  brand: "My App"
-) do |menu| %>
-  <% menu.with_list do %>
-    <%= link_to "Home", root_path, class: "menu-item" %>
+    <%= render Bali::SideMenu::Item::Component.new(
+      current_path: request.path, href: dashboard_path, name: "Dashboard", icon: "home"
+    ) %>
+    <%= render Bali::SideMenu::Item::Component.new(
+      current_path: request.path, href: users_path, name: "Users", icon: "users"
+    ) %>
   <% end %>
 <% end %>
 ```
@@ -59,37 +79,48 @@ Navigation list groups. Accepts:
 ```erb
 <%= render Bali::SideMenu::Component.new(
   current_path: request.path,
-  collapsable: true
+  collapsible: true,
+  brand: "My App"
 ) do |menu| %>
   <% menu.with_list(title: "Main") do %>
-    <%= link_to "Dashboard", dashboard_path, class: "menu-item" %>
+    <%= render Bali::SideMenu::Item::Component.new(
+      current_path: request.path, href: root_path, name: "Home", icon: "home"
+    ) %>
   <% end %>
 <% end %>
 ```
 
-### Inline (Not Fixed)
+### Items with Badge and Match
 
 ```erb
-<%= render Bali::SideMenu::Component.new(
+<%= render Bali::SideMenu::Item::Component.new(
   current_path: request.path,
-  fixed: false
-) do |menu| %>
-  <% menu.with_list do %>
-    <%= link_to "Item 1", path1, class: "menu-item" %>
-  <% end %>
-<% end %>
+  href: inbox_path,
+  name: "Inbox",
+  icon: "inbox",
+  badge: "5",
+  badge_color: "error",
+  match: :starts_with
+) %>
 ```
 
-### Dropdown Group Behavior
+### Bottom Groups
 
 ```erb
-<%= render Bali::SideMenu::Component.new(
-  current_path: request.path,
-  group_behavior: :dropdown
-) do |menu| %>
-  <% menu.with_list(title: "Settings") do %>
-    <%= link_to "Profile", profile_path, class: "menu-item" %>
-    <%= link_to "Security", security_path, class: "menu-item" %>
+<%= render Bali::SideMenu::Component.new(current_path: request.path) do |menu| %>
+  <% menu.with_list(title: "Main") do %>
+    <%= render Bali::SideMenu::Item::Component.new(
+      current_path: request.path, href: dashboard_path, name: "Dashboard"
+    ) %>
+  <% end %>
+
+  <% menu.with_bottom_group(name: "Account", icon: "user") do %>
+    <%= render Bali::SideMenu::Item::Component.new(
+      current_path: request.path, href: profile_path, name: "Profile"
+    ) %>
+    <%= render Bali::SideMenu::Item::Component.new(
+      current_path: request.path, href: settings_path, name: "Settings"
+    ) %>
   <% end %>
 <% end %>
 ```
@@ -98,16 +129,26 @@ Navigation list groups. Accepts:
 
 ```erb
 <%= render Bali::SideMenu::Component.new(current_path: request.path) do |menu| %>
-  <% menu.with_menu_switch(name: "Admin", active: admin?, authorized: can_admin?) do %>
-    <% menu.with_list(title: "Admin") do %>
-      <%= link_to "Users", admin_users_path, class: "menu-item" %>
-    <% end %>
-  <% end %>
+  <% menu.with_menu_switch(
+    title: "Admin",
+    href: admin_root_path,
+    icon: "shield",
+    active: admin_context?,
+    authorized: current_user.admin?
+  ) %>
 
-  <% menu.with_menu_switch(name: "User", active: !admin?, authorized: true) do %>
-    <% menu.with_list(title: "User") do %>
-      <%= link_to "Profile", profile_path, class: "menu-item" %>
-    <% end %>
+  <% menu.with_menu_switch(
+    title: "App",
+    href: root_path,
+    icon: "home",
+    active: !admin_context?,
+    authorized: true
+  ) %>
+
+  <% menu.with_list(title: "Navigation") do %>
+    <%= render Bali::SideMenu::Item::Component.new(
+      current_path: request.path, href: dashboard_path, name: "Dashboard"
+    ) %>
   <% end %>
 <% end %>
 ```
@@ -134,8 +175,8 @@ For mobile responsiveness, add a checkbox trigger in your layout:
 
 ## Notes
 
-- The `current_path` parameter is required for active link detection
-- Fixed mode (default) positions the sidebar fixed to the viewport
-- Collapsible mode allows toggling between full and icon-only sidebar
-- Menu switches enable multi-menu layouts with authorization support
-- Mobile trigger ID defaults to `'side-menu-mobile-trigger'` but can be customized
+- `current_path` is required for active link detection; pass `request.path` from the controller
+- `collapsible:` replaces the deprecated `collapsable:` param (both accepted for now)
+- `match: :crud` marks the item active for index/show/new/edit routes of the same resource
+- `bottom_groups` render below all lists, fixed to the sidebar bottom — useful for account/settings
+- Menu switches link to different URLs (full navigation), not toggling visibility inline

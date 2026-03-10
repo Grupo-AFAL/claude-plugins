@@ -9,15 +9,17 @@ Full admin layout wrapper combining SideMenu + optional topbar + main content ar
 
 ## Slots
 
+- `banner` (renders_one) - Full-width banner above everything (announcements, alerts)
+- `navbar` (renders_one) - Full-width navbar below banner, above sidebar+body (adds `.app-layout--has-navbar` class)
 - `sidebar` (renders_one) - Sidebar content (typically SideMenu component)
-- `topbar` (renders_one) - Optional topbar/navbar above body
+- `topbar` (renders_one) - Optional topbar above body within the main content area (not full-width)
 - `body` (renders_one) - Main content area (flex-1, p-6)
 
 ## Layout
 
-- Flex container with `min-h-screen`
+- Banner (full-width, if present) -> Navbar (full-width, if present) -> Sidebar + Main content
 - Sidebar on left (fixed width) + Main content (flex-1, bg-base-200)
-- Optional topbar rendered above body within main content area
+- Topbar rendered above body within main content area (unlike navbar which is full-width)
 - Body is a `<main>` element with `flex-1` and `p-6` padding
 
 ## Usage

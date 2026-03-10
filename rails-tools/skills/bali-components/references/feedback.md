@@ -12,8 +12,9 @@ Bali::Notification::Component - Temporary alert that auto-dismisses. Used for fl
 Bali::Notification::Component.new(
   type: :success,                # :success, :info, :warning, :error, :danger, :primary
   delay: 3000,                   # Auto-dismiss delay in milliseconds
-  fixed: true,                   # Fixed positioning (top-right corner)
-  dismiss: true,                 # Show dismiss button
+  fixed: true,                   # Fixed positioning. Default: true. false = inline
+  position: :bottom_right,       # :top_right, :bottom_right (default)
+  dismiss: true,                 # Show dismiss button. Default: true
   style: :soft,                  # :soft, :outline, :dash (optional)
   **options                      # Additional HTML attributes
 )
@@ -21,7 +22,9 @@ Bali::Notification::Component.new(
 
 **Types**: `:success`, `:info`, `:warning`, `:error`, `:danger` (→ error), `:primary` (→ info)
 
-**Styles**: `:soft`, `:outline`, `:dash` (new styling variants)
+**Styles**: `:soft`, `:outline`, `:dash`
+
+**Positions** (when `fixed: true`): `:bottom_right` (default), `:top_right`
 
 ### Examples
 

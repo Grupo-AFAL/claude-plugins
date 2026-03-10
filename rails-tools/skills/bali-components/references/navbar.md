@@ -19,8 +19,18 @@ Brand content (logo, app name, etc.) typically positioned on the left.
 ### `burgers` (renders_many)
 Mobile menu toggle buttons. Uses `Bali::Navbar::Burger::Component`.
 
+Burger parameters:
+- `type:` (Symbol) - `:main` (default), `:alt`, `:sidebar`
+- `trigger_id:` (String) - DOM id of the element to toggle (required for `:sidebar` type)
+- `href:` (String) - URL for anchor-based burger toggle (alternative to `trigger_id`)
+
 ### `menus` (renders_many)
 Navigation menu groups. Uses `Bali::Navbar::Menu::Component`.
+
+Menu slots:
+- `start_items` - Content anchored to the left of the menu group
+- `start_dropdown_items` - Dropdown items anchored to the left
+- `end_items` - Content anchored to the right of the menu group
 
 ## Color Presets
 
@@ -99,7 +109,7 @@ Navigation menu groups. Uses `Bali::Navbar::Menu::Component`.
 <% end %>
 ```
 
-### With Burger Menu
+### With Burger Menu (main)
 
 ```erb
 <%= render Bali::Navbar::Component.new do |navbar| %>
@@ -107,14 +117,27 @@ Navigation menu groups. Uses `Bali::Navbar::Menu::Component`.
     <span>My App</span>
   <% end %>
 
-  <% navbar.with_burger do %>
-    <!-- Mobile menu toggle -->
+  <% navbar.with_burger(type: :main) %>
+
+  <% navbar.with_menu do |menu| %>
+    <% menu.with_start_items do %>
+      <%= link_to "Home", root_path %>
+      <%= link_to "About", about_path %>
+    <% end %>
+  <% end %>
+<% end %>
+```
+
+### With Burger for Sidebar (SideMenu integration)
+
+```erb
+<%= render Bali::Navbar::Component.new do |navbar| %>
+  <% navbar.with_brand do %>
+    <span>My App</span>
   <% end %>
 
-  <% navbar.with_menu do %>
-    <%= link_to "Home", root_path %>
-    <%= link_to "About", about_path %>
-  <% end %>
+  <%# Toggles the drawer with id="main-sidebar" %>
+  <% navbar.with_burger(type: :sidebar, trigger_id: "main-sidebar") %>
 <% end %>
 ```
 

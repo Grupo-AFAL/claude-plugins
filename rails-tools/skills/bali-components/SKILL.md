@@ -1,11 +1,11 @@
 ---
 name: bali-components
-description: This skill should be used when the user asks to "build a view with Bali", "create a form", "add a card", "use ViewComponents", "add a modal", "add a table", "style with DaisyUI", "create a dashboard", "add navigation", "build a layout", "add a sidebar", "create filters", "add pagination", "upload a file", "create a page", "build an index page", "build a show page", "build a form page", "build a dashboard page", "set up app layout", or mentions any Bali component by name (Card, Table, Modal, Tooltip, Avatar, Link, Tag, Tabs, Breadcrumb, Button, Drawer, Dropdown, FormBuilder, DataTable, Stepper, Timeline, Chart, GanttChart, Skeleton, Carousel, DashboardPage, FormPage, IndexPage, ShowPage, AppLayout, PageHeader, or other Bali ViewComponents).
+description: This skill should be used when the user asks to "build a view with Bali", "create a form", "add a card", "use ViewComponents", "add a modal", "add a table", "style with DaisyUI", "create a dashboard", "add navigation", "build a layout", "add a sidebar", "create filters", "add pagination", "upload a file", "create a page", "build an index page", "build a show page", "build a form page", "build a dashboard page", "set up app layout", "add a document editor", "add a block editor", "build a document page", or mentions any Bali component by name (Card, Table, Modal, Tooltip, Avatar, Link, Tag, Tabs, Breadcrumb, Button, Drawer, Dropdown, FormBuilder, DataTable, Stepper, Timeline, Chart, GanttChart, Skeleton, Carousel, DashboardPage, FormPage, IndexPage, ShowPage, AppLayout, PageHeader, DocumentPage, DocumentEditor, BlockEditor, or other Bali ViewComponents).
 ---
 
 # Bali ViewComponents
 
-Bali is a Rails ViewComponent library built on DaisyUI/Tailwind with 50+ components. This skill provides API reference and prevents common mistakes when building views with Bali components.
+Bali is a Rails ViewComponent library built on DaisyUI/Tailwind with 60+ components. This skill provides API reference and prevents common mistakes when building views with Bali components.
 
 ## Critical Rules
 
@@ -65,6 +65,7 @@ These components provide complete page structures. **Use them instead of manuall
 - **`references/index-page.md`** -- List/table page with header, actions, and body
 - **`references/show-page.md`** -- Detail page with title tags, actions, body, and optional sidebar
 - **`references/form-page.md`** -- New/edit page with back button, body, and optional sidebar
+- **`references/document-page.md`** -- Three-panel document layout with TOC, editor, and metadata
 
 **When to use which:**
 
@@ -74,6 +75,7 @@ These components provide complete page structures. **Use them instead of manuall
 | `show.html.erb` | `ShowPage` | Title + tags, actions (Edit/Delete), body + sidebar |
 | `new.html.erb` / `edit.html.erb` | `FormPage` | Title, back button, card-wrapped form + sidebar |
 | Dashboard views | `DashboardPage` | Title, stat cards, body for charts/cards |
+| Document views | `DocumentPage` | TOC + editor + metadata panels |
 | `layouts/admin.html.erb` | `AppLayout` | SideMenu + topbar + yield |
 
 ### Forms
@@ -142,7 +144,9 @@ These components provide complete page structures. **Use them instead of manuall
 - **`references/rate.md`** -- Star rating component
 
 ### Rich Content & Media
-- **`references/rich-text-editor.md`** -- WYSIWYG HTML editor
+- **`references/block-editor.md`** -- Block-based content editor (BlockNote.js) with AI and mentions
+- **`references/document-editor.md`** -- Full document editor with versioning, autosave, and toolbar
+- **`references/rich-text-editor.md`** -- WYSIWYG HTML editor (Tiptap)
 - **`references/direct-upload.md`** -- File upload to cloud storage (Active Storage)
 - **`references/carousel.md`** -- Image carousel (Glide.js)
 - **`references/search-input.md`** -- Search field with auto-submit

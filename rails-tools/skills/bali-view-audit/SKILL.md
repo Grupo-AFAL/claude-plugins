@@ -8,7 +8,7 @@ context: fork
 
 Systematic review of Rails views to maximize Bali ViewComponent usage, catch incorrect API usage, and identify patterns that should become new components.
 
-**CRITICAL:** Always verify component APIs before suggesting changes. Use the `bali-components` skill for API reference -- it has per-component reference files for all 50+ components.
+**CRITICAL:** Always verify component APIs before suggesting changes. Use the `bali-components` skill for API reference -- it has per-component reference files for all 60+ components.
 
 ## Audit Workflow
 
@@ -69,7 +69,7 @@ Scan for raw HTML that has a Bali component equivalent. Prioritize by impact:
 - Star ratings, charts, calendars, carousels, maps, heatmaps, Gantt charts
 - These are lower priority but still valuable if raw HTML is found
 
-Consult **`references/patterns.md`** for the complete pattern-to-component mapping across all 50+ components.
+Consult **`references/patterns.md`** for the complete pattern-to-component mapping across all 60+ components.
 
 ### Step 4: Verify APIs Before Suggesting
 
